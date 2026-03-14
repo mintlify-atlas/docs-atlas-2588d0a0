@@ -1,80 +1,397 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quickstart Guide"
+description: "Get started with OpenCBS Cloud - from login to your first loan in minutes"
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will walk you through the essential steps to get up and running with OpenCBS Cloud. You'll learn how to authenticate, create your first client profile, and process a loan application.
 
-### Step 1: Set up your local environment
+<Note>
+  Before you begin, make sure you have OpenCBS Cloud installed and running. See the [Installation Guide](/installation) for setup instructions.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Prerequisites
 
-### Step 2: Deploy your changes
+- OpenCBS Cloud server running (default: `http://localhost:8080`)
+- Valid user credentials (admin access recommended for first setup)
+- API client tool (Postman, cURL, or similar)
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+---
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Step 1: Authentication
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+First, authenticate with the OpenCBS Cloud API to obtain an access token.
 
-### Step 3: Go live
+<Steps>
+  <Step title="Login to the system">
+    Send a POST request to the login endpoint with your credentials.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ```bash
+    curl -X POST http://localhost:8080/api/login \
+      -H "Content-Type: application/json" \
+      -d '{
+        "username": "admin",
+        "password": "your-password"
+      }'
+    ```
 
-## Next steps
+    **Response:**
+    ```json
+    {
+      "data": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInNjb3Blc..."
+    }
+    ```
+  </Step>
 
-Now that you have your docs running, explore these key features:
+  <Step title="Save the authentication token">
+    Copy the token from the response. You'll need to include this in the `Authorization` header for all subsequent requests.
+
+    ```bash
+    Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+    ```
+
+    <Tip>
+      The token is valid for the duration of your session. Store it securely and include it in all API requests.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## Step 2: Create a Client Profile
+
+Create a person profile for your first client. OpenCBS Cloud supports three profile types: Person, Company, and Group.
+
+<Steps>
+  <Step title="Prepare client data">
+    Create a JSON payload with the client's information:
+
+    ```json
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phoneNumber": "+1234567890",
+      "address": "123 Main Street, City",
+      "dateOfBirth": "1990-01-15"
+    }
+    ```
+  </Step>
+
+  <Step title="Submit the client profile">
+    Send a POST request to create the person profile:
+
+    ```bash
+    curl -X POST http://localhost:8080/api/profiles/people \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -d '{
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com",
+        "phoneNumber": "+1234567890",
+        "address": "123 Main Street, City",
+        "dateOfBirth": "1990-01-15"
+      }'
+    ```
+
+    <Note>
+      OpenCBS Cloud uses a maker-checker workflow for sensitive operations. The response will contain a request ID that needs approval.
+    </Note>
+
+    **Response:**
+    ```json
+    {
+      "id": 1
+    }
+    ```
+  </Step>
+
+  <Step title="Retrieve the client profile">
+    After approval, fetch the created profile:
+
+    ```bash
+    curl -X GET http://localhost:8080/api/profiles/people/1 \
+      -H "Authorization: Bearer YOUR_TOKEN"
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Step 3: Create a Loan Application
+
+Now that you have a client profile, create a loan application.
+
+<Steps>
+  <Step title="Check available loan products">
+    First, retrieve the list of available loan products:
+
+    ```bash
+    curl -X GET http://localhost:8080/api/loan-products \
+      -H "Authorization: Bearer YOUR_TOKEN"
+    ```
+
+    This returns available loan products with their terms, interest rates, and requirements.
+  </Step>
+
+  <Step title="Create the loan application">
+    Submit a loan application for your client:
+
+    ```bash
+    curl -X POST http://localhost:8080/api/loan-applications \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -d '{
+        "profileId": 1,
+        "loanProductId": 1,
+        "userId": 1,
+        "amount": 10000,
+        "interestRate": 12.5,
+        "maturity": 12,
+        "gracePeriod": 0,
+        "disbursementDate": "2026-03-15",
+        "amounts": []
+      }'
+    ```
+
+    **Response:**
+    ```json
+    {
+      "id": 1,
+      "profileId": 1,
+      "status": "IN_PROGRESS",
+      "amount": 10000,
+      "interestRate": 12.5,
+      "maturity": 12
+    }
+    ```
+
+    <Tip>
+      The loan application is created with status `IN_PROGRESS`. You'll need to submit it for approval.
+    </Tip>
+  </Step>
+
+  <Step title="Preview the repayment schedule">
+    Before submitting, preview the loan repayment schedule:
+
+    ```bash
+    curl -X POST http://localhost:8080/api/loan-applications/preview \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -d '{
+        "profileId": 1,
+        "loanProductId": 1,
+        "userId": 1,
+        "amount": 10000,
+        "interestRate": 12.5,
+        "maturity": 12,
+        "gracePeriod": 0,
+        "disbursementDate": "2026-03-15",
+        "amounts": []
+      }'
+    ```
+
+    This returns a detailed schedule showing principal, interest, and total payment for each installment.
+  </Step>
+
+  <Step title="Submit the loan application">
+    Once verified, submit the loan application for approval:
+
+    ```bash
+    curl -X POST http://localhost:8080/api/loan-applications/1/submit \
+      -H "Authorization: Bearer YOUR_TOKEN"
+    ```
+
+    **Response:**
+    ```json
+    {
+      "id": 1,
+      "status": "PENDING",
+      "amount": 10000
+    }
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Step 4: Approve and Disburse the Loan
+
+<Steps>
+  <Step title="Change loan status to approved">
+    Approve the loan application (requires appropriate permissions):
+
+    ```bash
+    curl -X POST http://localhost:8080/api/loan-applications/1/change-status \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer YOUR_TOKEN" \
+      -d '{
+        "status": "APPROVED",
+        "comment": "Loan approved after credit assessment"
+      }'
+    ```
+  </Step>
+
+  <Step title="Disburse the loan">
+    Once approved, disburse the loan to the client's account:
+
+    ```bash
+    curl -X POST http://localhost:8080/api/loan-applications/1/disburse \
+      -H "Authorization: Bearer YOUR_TOKEN"
+    ```
+
+    <Warning>
+      The profile must have a current account with the appropriate currency before disbursement. Create one using the `/api/profiles/people/{id}/account` endpoint if needed.
+    </Warning>
+
+    **Response:**
+    ```json
+    {
+      "id": 2
+    }
+    ```
+  </Step>
+
+  <Step title="View the active loan">
+    After disbursement, the loan becomes active:
+
+    ```bash
+    curl -X GET http://localhost:8080/api/loans/1 \
+      -H "Authorization: Bearer YOUR_TOKEN"
+    ```
+
+    This returns the complete loan details including the repayment schedule, disbursement information, and current balance.
+  </Step>
+</Steps>
+
+---
+
+## Common API Endpoints Reference
+
+Here are the most commonly used endpoints for daily operations:
+
+<CodeGroup>
+
+```bash Authentication
+# Login
+POST /api/login
+
+# Logout
+POST /api/logout/{userId}
+
+# Change password
+PUT /api/login/update-password
+```
+
+```bash Profiles
+# Create person
+POST /api/profiles/people
+
+# Get person details
+GET /api/profiles/people/{id}
+
+# Search profiles
+GET /api/profiles/people/lookup?search={query}
+
+# Create current account
+POST /api/profiles/people/{id}/account?currencyId={currencyId}
+```
+
+```bash Loan Applications
+# Create loan application
+POST /api/loan-applications
+
+# Get loan application
+GET /api/loan-applications/{id}
+
+# Preview schedule
+POST /api/loan-applications/preview
+
+# Submit for approval
+POST /api/loan-applications/{id}/submit
+
+# Approve/reject
+POST /api/loan-applications/{id}/change-status
+
+# Disburse
+POST /api/loan-applications/{id}/disburse
+```
+
+```bash Loans
+# Get loan details
+GET /api/loans/{id}
+
+# Get loan schedule
+GET /api/loans/{loanId}/schedule
+
+# Get loan events
+GET /api/loans/{loanId}/events
+
+# Process repayment
+POST /api/loans/{loanId}/repayment
+```
+
+</CodeGroup>
+
+---
+
+## Next Steps
+
+Now that you've created your first client and loan, explore these features:
 
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Savings Accounts" icon="piggy-bank" href="/api/savings/overview">
+  Create and manage savings accounts for your clients
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="Loan Repayment" icon="money-bill-transfer" href="/api/loans/repayments">
+  Process loan repayments and track payment history
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Custom Fields" icon="table-columns" href="/admin/custom-fields">
+  Extend profiles and products with custom fields
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="Reports" icon="chart-line" href="/guides/reports">
+  Generate financial reports and analytics
 </Card>
 
 </CardGroup>
 
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Authentication fails with 401 Unauthorized">
+    - Verify your username and password are correct
+    - Check that the user account is active and not locked
+    - Ensure the server is running and accessible
+  </Accordion>
+
+  <Accordion title="Cannot create profile - 403 Forbidden">
+    - Verify your user has the `MAKER_FOR_PEOPLE` permission
+    - Check that your authentication token is valid and not expired
+    - Ensure you're using the correct Authorization header format
+  </Accordion>
+
+  <Accordion title="Loan disbursement fails">
+    - Verify the loan application status is `APPROVED`
+    - Ensure the profile has a current account with the matching currency
+    - Check that you have the `MAKER_FOR_LOAN_DISBURSEMENT` permission
+  </Accordion>
+
+  <Accordion title="Request returns maker-checker ID instead of entity">
+    OpenCBS Cloud uses a maker-checker workflow for sensitive operations. Some actions require approval:
+    - The response contains a request ID
+    - Use the requests API to approve the pending request
+    - Once approved, the entity will be created/updated
+  </Accordion>
+</AccordionGroup>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Need more help?** Check the complete [API Reference](/api/authentication) or see the [User Guides](/guides/client-management) for detailed workflows.
 </Note>

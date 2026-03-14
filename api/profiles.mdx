@@ -1,0 +1,403 @@
+---
+title: Profiles
+description: Manage client and group profiles in OpenCBS Cloud
+---
+
+The Profiles API provides endpoints for managing client and group profiles, including searching, retrieving profile details, accessing current accounts, and viewing profile history.
+
+## Get All Profiles
+
+<CodeGroup>
+```http Request
+GET /api/profiles
+```
+</CodeGroup>
+
+Retrieves a paginated list of profiles with optional search functionality.
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Optional search string to filter profiles by name or other attributes
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination (zero-based)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort criteria in the format: `property,asc|desc`
+</ParamField>
+
+### Response
+
+<ResponseField name="content" type="array">
+  Array of profile objects
+  <Expandable title="Profile Object">
+    <ResponseField name="id" type="long">
+      Unique identifier for the profile
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the profile (client or group)
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Profile type (e.g., "PERSON", "COMPANY", "GROUP")
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Current status of the profile (PENDING, ACTIVE, CLOSED, etc.)
+    </ResponseField>
+    <ResponseField name="branchName" type="string">
+      Name of the branch this profile belongs to
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totalElements" type="long">
+  Total number of profiles matching the criteria
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages available
+</ResponseField>
+
+<ResponseField name="size" type="integer">
+  Number of items per page
+</ResponseField>
+
+<ResponseField name="number" type="integer">
+  Current page number
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "John Smith",
+      "type": "PERSON",
+      "status": "ACTIVE",
+      "branchName": "Main Branch"
+    },
+    {
+      "id": 2,
+      "name": "ABC Company Ltd",
+      "type": "COMPANY",
+      "status": "ACTIVE",
+      "branchName": "Downtown Branch"
+    }
+  ],
+  "totalElements": 150,
+  "totalPages": 8,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Get Single Profile
+
+<CodeGroup>
+```http Request
+GET /api/profiles/{profileId}/single
+```
+</CodeGroup>
+
+Retrieves detailed information about a specific profile.
+
+### Path Parameters
+
+<ParamField path="profileId" type="long" required>
+  The unique identifier of the profile
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="long">
+  Unique identifier for the profile
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the profile
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Profile type (PERSON, COMPANY, GROUP)
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status of the profile
+</ResponseField>
+
+<ResponseField name="branchName" type="string">
+  Name of the branch this profile belongs to
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 1,
+  "name": "John Smith",
+  "type": "PERSON",
+  "status": "ACTIVE",
+  "branchName": "Main Branch"
+}
+```
+
+```json Error Response (404)
+{
+  "message": "Profile not found (ID=999).",
+  "status": 404
+}
+```
+</CodeGroup>
+
+---
+
+## Get Profiles with Current Accounts
+
+<CodeGroup>
+```http Request
+GET /api/profiles/with-accounts
+```
+</CodeGroup>
+
+Retrieves profiles along with their associated current account information.
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Optional search string to filter profiles
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+### Response
+
+<ResponseField name="content" type="array">
+  Array of simplified profile account objects
+  <Expandable title="Profile Account Object">
+    <ResponseField name="id" type="long">
+      Account identifier
+    </ResponseField>
+    <ResponseField name="profileId" type="long">
+      Profile identifier
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Account name
+    </ResponseField>
+    <ResponseField name="currency" type="string">
+      Currency code (e.g., "USD", "EUR")
+    </ResponseField>
+    <ResponseField name="balance" type="decimal">
+      Current account balance
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 101,
+      "profileId": 1,
+      "name": "John Smith - Current Account",
+      "currency": "USD",
+      "balance": 5250.00
+    },
+    {
+      "id": 102,
+      "profileId": 2,
+      "name": "ABC Company Ltd - Current Account",
+      "currency": "USD",
+      "balance": 125000.50
+    }
+  ],
+  "totalElements": 150,
+  "totalPages": 8,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Get Current Account ID
+
+<CodeGroup>
+```http Request
+GET /api/profiles/current-account/{profileId}
+```
+</CodeGroup>
+
+Retrieves the current account ID associated with a specific profile.
+
+### Path Parameters
+
+<ParamField path="profileId" type="long" required>
+  The unique identifier of the profile
+</ParamField>
+
+### Response
+
+Returns the account ID as a long integer, or `null` if no current account is associated with the profile.
+
+<CodeGroup>
+```json Response Example
+101
+```
+
+```json No Account Example
+null
+```
+</CodeGroup>
+
+---
+
+## Get Profile History
+
+<CodeGroup>
+```http Request
+GET /api/profiles/{id}/history
+```
+</CodeGroup>
+
+Retrieves the complete audit history of changes made to a profile.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the profile
+</ParamField>
+
+### Response
+
+<ResponseField name="array" type="array">
+  Array of history entries
+  <Expandable title="History Entry">
+    <ResponseField name="revisionId" type="integer">
+      Unique identifier for this revision
+    </ResponseField>
+    <ResponseField name="timestamp" type="string">
+      ISO 8601 timestamp of when the change occurred
+    </ResponseField>
+    <ResponseField name="author" type="string">
+      Username of the person who made the change
+    </ResponseField>
+    <ResponseField name="revisionType" type="string">
+      Type of change (ADD, MOD, DEL)
+    </ResponseField>
+    <ResponseField name="changes" type="object">
+      Object containing the modified fields and their values
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+[
+  {
+    "revisionId": 5,
+    "timestamp": "2026-03-10T14:30:00Z",
+    "author": "admin",
+    "revisionType": "MOD",
+    "changes": {
+      "status": {
+        "old": "PENDING",
+        "new": "ACTIVE"
+      }
+    }
+  },
+  {
+    "revisionId": 1,
+    "timestamp": "2026-03-01T09:15:00Z",
+    "author": "admin",
+    "revisionType": "ADD",
+    "changes": {}
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get Profile History at Specific Time
+
+<CodeGroup>
+```http Request
+GET /api/profiles/{id}/history/last_change?dateTime={dateTime}
+```
+</CodeGroup>
+
+Retrieves the last change made to a profile before or at a specific date and time.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the profile
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="dateTime" type="string" required>
+  ISO 8601 date-time string (e.g., "2026-03-10T14:30:00Z")
+</ParamField>
+
+### Response
+
+<ResponseField name="revisionId" type="integer">
+  Unique identifier for this revision
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp of when the change occurred
+</ResponseField>
+
+<ResponseField name="author" type="string">
+  Username of the person who made the change
+</ResponseField>
+
+<ResponseField name="revisionType" type="string">
+  Type of change (ADD, MOD, DEL)
+</ResponseField>
+
+<ResponseField name="changes" type="object">
+  Object containing the modified fields and their values
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "revisionId": 5,
+  "timestamp": "2026-03-10T14:30:00Z",
+  "author": "admin",
+  "revisionType": "MOD",
+  "changes": {
+    "status": {
+      "old": "PENDING",
+      "new": "ACTIVE"
+    }
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## Permissions
+
+All profile endpoints require the `GET_PROFILES` permission with the `PROFILES` module type.

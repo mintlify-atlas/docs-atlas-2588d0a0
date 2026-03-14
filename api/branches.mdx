@@ -1,0 +1,358 @@
+---
+title: Branches
+description: Manage branch offices in OpenCBS Cloud
+---
+
+The Branches API provides endpoints for creating, updating, and retrieving branch office information. Branches represent physical or logical organizational units within your financial institution.
+
+## Get All Branches
+
+<CodeGroup>
+```http Request
+GET /api/branches
+```
+</CodeGroup>
+
+Retrieves a paginated list of all branches.
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination (zero-based)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort criteria in the format: `property,asc|desc`
+</ParamField>
+
+### Response
+
+<ResponseField name="content" type="array">
+  Array of branch objects
+  <Expandable title="Branch Object">
+    <ResponseField name="id" type="long">
+      Unique identifier for the branch
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the branch
+    </ResponseField>
+    <ResponseField name="customFieldSections" type="array">
+      Array of custom field sections associated with the branch
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totalElements" type="long">
+  Total number of branches
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Main Branch",
+      "customFieldSections": []
+    },
+    {
+      "id": 2,
+      "name": "Downtown Branch",
+      "customFieldSections": []
+    },
+    {
+      "id": 3,
+      "name": "Westside Branch",
+      "customFieldSections": []
+    }
+  ],
+  "totalElements": 3,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Get Branches for Lookup
+
+<CodeGroup>
+```http Request
+GET /api/branches/lookup
+```
+</CodeGroup>
+
+Retrieves branches with search functionality, typically used for dropdown/lookup components in the UI.
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Search string to filter branches by name
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+### Response
+
+Returns the same structure as the Get All Branches endpoint, but filtered by the search parameter.
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 2,
+      "name": "Downtown Branch",
+      "customFieldSections": []
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Get Branch by ID
+
+<CodeGroup>
+```http Request
+GET /api/branches/{id}
+```
+</CodeGroup>
+
+Retrieves detailed information about a specific branch.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the branch
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="long">
+  Unique identifier for the branch
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the branch
+</ResponseField>
+
+<ResponseField name="customFieldSections" type="array">
+  Array of custom field sections associated with the branch
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 1,
+  "name": "Main Branch",
+  "customFieldSections": []
+}
+```
+
+```json Error Response (404)
+{
+  "message": "Branch not found (ID=999).",
+  "status": 404
+}
+```
+</CodeGroup>
+
+---
+
+## Create Branch
+
+<CodeGroup>
+```http Request
+POST /api/branches
+```
+</CodeGroup>
+
+Creates a new branch in the system.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Name of the branch
+</ParamField>
+
+<ParamField body="code" type="string" required>
+  Unique code identifier for the branch
+</ParamField>
+
+<ParamField body="fieldValues" type="array">
+  Array of custom field values for the branch
+</ParamField>
+
+<CodeGroup>
+```json Request Example
+{
+  "name": "North Branch",
+  "code": "NB001",
+  "fieldValues": []
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns the created branch object with generated ID.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the newly created branch
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the branch
+</ResponseField>
+
+<ResponseField name="customFieldSections" type="array">
+  Array of custom field sections
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 4,
+  "name": "North Branch",
+  "customFieldSections": []
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "code",
+      "message": "Branch code already exists"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Update Branch
+
+<CodeGroup>
+```http Request
+PUT /api/branches/{id}
+```
+</CodeGroup>
+
+Updates an existing branch.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the branch to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Updated name of the branch
+</ParamField>
+
+<ParamField body="code" type="string" required>
+  Updated code identifier for the branch
+</ParamField>
+
+<ParamField body="fieldValues" type="array">
+  Updated array of custom field values
+</ParamField>
+
+<CodeGroup>
+```json Request Example
+{
+  "name": "North Branch (Updated)",
+  "code": "NB001",
+  "fieldValues": []
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns the updated branch object.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the branch
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Updated name of the branch
+</ResponseField>
+
+<ResponseField name="customFieldSections" type="array">
+  Array of custom field sections
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 4,
+  "name": "North Branch (Updated)",
+  "customFieldSections": []
+}
+```
+
+```json Error Response (404)
+{
+  "message": "Branch not found(ID=999).",
+  "status": 404
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "name",
+      "message": "Branch name is required"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Validation Rules
+
+### Create Branch
+- `name` is required and must be unique
+- `code` is required and must be unique
+- Custom field values must match the defined field structure
+
+### Update Branch
+- Branch must exist (validated by ID)
+- `name` must be unique (excluding the current branch)
+- `code` must be unique (excluding the current branch)
+- Custom field values must match the defined field structure

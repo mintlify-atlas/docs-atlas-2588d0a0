@@ -1,0 +1,480 @@
+---
+title: Database Setup
+description: Configure PostgreSQL database and run migrations for OpenCBS Cloud
+---
+
+OpenCBS Cloud uses PostgreSQL as its primary database with Flyway for version-controlled schema migrations. This guide covers database installation, configuration, and migration management.
+
+## Database Requirements
+
+- **PostgreSQL Version**: 9.4 or higher (12+ recommended)
+- **JDBC Driver**: PostgreSQL JDBC 9.4.1212 (included in dependencies)
+- **Required Extensions**: Standard PostgreSQL installation
+- **Encoding**: UTF-8
+- **Collation**: en_US.UTF-8 or C
+
+## Installing PostgreSQL
+
+If you haven't already installed PostgreSQL, follow the instructions in [System Requirements](/deployment/requirements#postgresql-database).
+
+## Database Creation
+
+<Steps>
+  <Step title="Access PostgreSQL">
+    Connect to PostgreSQL as the postgres superuser:
+
+    ```bash
+    sudo -u postgres psql
+    ```
+  </Step>
+
+  <Step title="Create Database">
+    Create a new database for OpenCBS Cloud:
+
+    ```sql
+    CREATE DATABASE opencbs_db
+      WITH ENCODING 'UTF8'
+      LC_COLLATE='en_US.UTF-8'
+      LC_CTYPE='en_US.UTF-8'
+      TEMPLATE=template0;
+    ```
+
+    <Note>
+    You can choose any database name. Update your application configuration accordingly.
+    </Note>
+  </Step>
+
+  <Step title="Create Database User">
+    Create a dedicated user for the application:
+
+    ```sql
+    CREATE USER opencbs_user WITH PASSWORD 'your_secure_password';
+    ```
+
+    <Warning>
+    Use a strong password in production. Avoid simple passwords or default credentials.
+    </Warning>
+  </Step>
+
+  <Step title="Grant Permissions">
+    Grant the user full access to the database:
+
+    ```sql
+    GRANT ALL PRIVILEGES ON DATABASE opencbs_db TO opencbs_user;
+    
+    -- Connect to the database
+    \c opencbs_db
+    
+    -- Grant schema permissions
+    GRANT ALL ON SCHEMA public TO opencbs_user;
+    ```
+  </Step>
+
+  <Step title="Verify Connection">
+    Exit psql and test the connection:
+
+    ```bash
+    # Exit psql
+    \q
+    
+    # Test connection as new user
+    psql -U opencbs_user -d opencbs_db -h localhost
+    
+    # Enter password when prompted
+    # Should connect successfully
+    ```
+  </Step>
+</Steps>
+
+## Database Configuration
+
+### Connection Settings
+
+Configure database connection in your application properties file:
+
+```properties
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5432/opencbs_db
+spring.datasource.username=opencbs_user
+spring.datasource.password=your_secure_password
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# Connection Pool Settings
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+spring.datasource.hikari.idle-timeout=600000
+spring.datasource.hikari.max-lifetime=1800000
+
+# JPA/Hibernate Configuration
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQL9Dialect
+spring.jpa.show-sql=false
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+```
+
+<Warning>
+Never use `spring.jpa.hibernate.ddl-auto=create` or `update` in production. Always use `validate` and manage schema through Flyway migrations.
+</Warning>
+
+### PostgreSQL Configuration
+
+Optimize PostgreSQL for OpenCBS Cloud by editing `postgresql.conf`:
+
+```ini
+# Connection Settings
+max_connections = 100
+
+# Memory Settings
+shared_buffers = 256MB
+effective_cache_size = 1GB
+maintenance_work_mem = 64MB
+work_mem = 16MB
+
+# Write Performance
+wal_buffers = 16MB
+checkpoint_completion_target = 0.9
+
+# Query Optimization
+random_page_cost = 1.1  # For SSDs
+effective_io_concurrency = 200
+```
+
+Restart PostgreSQL after changes:
+
+```bash
+sudo systemctl restart postgresql
+```
+
+## Flyway Migrations
+
+OpenCBS Cloud uses Flyway 4.0.3 for database version control and migrations.
+
+### Migration Structure
+
+Migrations are organized by module in the source code:
+
+```
+server/
+├── opencbs-core/src/main/resources/db/migration/core/
+│   ├── V100__Adjust_permissions_and_roles_table.sql
+│   ├── V101__Add_get_balance_functions.sql
+│   ├── V102__Make_adjustment_on_till.sql
+│   └── ... (328 migration files)
+├── opencbs-loans/src/main/resources/db/migration/loans/
+│   ├── V10__add_field_into_specific_provisions_entries.sql
+│   ├── V11__update_loan_products_early_repayment_fee.sql
+│   └── ...
+├── opencbs-savings/src/main/resources/db/migration/savings/
+├── opencbs-borrowings/src/main/resources/db/migration/borrowings/
+├── opencbs-term-deposits/src/main/resources/db/migration/term-deposits/
+└── opencbs-bonds/src/main/resources/db/migration/bonds/
+```
+
+### Flyway Configuration
+
+Flyway is configured in the Spring Boot starter module:
+
+```xml
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-core</artifactId>
+    <version>4.0.3</version>
+</dependency>
+```
+
+Application properties for Flyway:
+
+```properties
+# Flyway Configuration
+flyway.enabled=true
+flyway.baseline-on-migrate=true
+flyway.locations=classpath:db/migration/core,classpath:db/migration/loans,classpath:db/migration/savings,classpath:db/migration/borrowings,classpath:db/migration/bonds,classpath:db/migration/term-deposits
+flyway.out-of-order=false
+flyway.validate-on-migrate=true
+```
+
+### Running Migrations
+
+Migrations run automatically when the application starts:
+
+<Steps>
+  <Step title="First-Time Setup">
+    On first run, Flyway creates a `flyway_schema_history` table and runs all migrations:
+
+    ```bash
+    java -jar opencbs-server.jar
+    ```
+
+    Look for Flyway output in logs:
+    ```
+    Flyway 4.0.3 by Boxfuse
+    Database: jdbc:postgresql://localhost:5432/opencbs_db (PostgreSQL 12.x)
+    Successfully validated 328 migrations (execution time 00:00.123s)
+    Creating Schema History table: "public"."flyway_schema_history"
+    Current version of schema "public": << Empty Schema >>
+    Migrating schema "public" to version 100 - Adjust permissions and roles table
+    Migrating schema "public" to version 101 - Add get balance functions
+    ...
+    Successfully applied 328 migrations to schema "public" (execution time 00:12.456s)
+    ```
+  </Step>
+
+  <Step title="Subsequent Runs">
+    On subsequent application starts, Flyway checks for new migrations:
+
+    ```
+    Flyway 4.0.3 by Boxfuse
+    Database: jdbc:postgresql://localhost:5432/opencbs_db (PostgreSQL 12.x)
+    Successfully validated 328 migrations (execution time 00:00.089s)
+    Current version of schema "public": 328
+    Schema "public" is up to date. No migration necessary.
+    ```
+  </Step>
+</Steps>
+
+### Migration Naming Convention
+
+Flyway migration files follow this pattern:
+
+```
+V{version}__{description}.sql
+```
+
+Examples:
+- `V100__Adjust_permissions_and_roles_table.sql`
+- `V101__Add_get_balance_functions.sql`
+- `V102__Make_adjustment_on_till.sql`
+
+<Note>
+Version numbers must be unique and are executed in ascending order. Use double underscores between version and description.
+</Note>
+
+### Manual Migration Management
+
+You can also run Flyway from the command line:
+
+```bash
+# Download Flyway CLI
+wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/4.0.3/flyway-commandline-4.0.3-linux-x64.tar.gz | tar xvz
+
+# Configure flyway.conf
+flyway.url=jdbc:postgresql://localhost:5432/opencbs_db
+flyway.user=opencbs_user
+flyway.password=your_secure_password
+flyway.locations=filesystem:./migrations
+
+# Run migrations
+./flyway migrate
+
+# Check migration status
+./flyway info
+
+# Validate migrations
+./flyway validate
+```
+
+## Database Schema Overview
+
+After migrations, the database contains schemas for:
+
+### Core Tables
+
+- **Users and Authentication**: `users`, `roles`, `permissions`
+- **Profiles**: `people`, `companies`, `groups`
+- **Branches**: `branches`
+- **Accounting**: `accounts`, `accounting_entries`, `transactions`
+- **Custom Fields**: `custom_fields`, `custom_field_sections`
+
+### Module-Specific Tables
+
+- **Loans**: `loan_products`, `loans`, `loan_applications`, `loan_events`, `loan_installments`
+- **Savings**: `savings_products`, `savings`, `savings_events`
+- **Borrowings**: `borrowing_products`, `borrowings`, `borrowing_events`
+- **Term Deposits**: `term_deposit_products`, `term_deposits`
+- **Bonds**: `bond_products`, `bonds`, `bond_installments`, `bond_events`
+
+### Audit and History
+
+OpenCBS uses Hibernate Envers for audit trails:
+
+```xml
+<dependency>
+    <groupId>org.springframework.data</groupId>
+    <artifactId>spring-data-envers</artifactId>
+</dependency>
+```
+
+Audit tables (suffixed with `_aud`) track historical changes.
+
+## Database Functions and Procedures
+
+Several migrations create PostgreSQL functions:
+
+- `get_balance()` - Calculate account balances
+- `get_loan_schedule()` - Generate loan repayment schedules
+- `get_operation()` - Retrieve transaction operations
+
+These functions are used by the application for complex calculations.
+
+## Backup and Restore
+
+### Creating Backups
+
+<CodeGroup>
+```bash Full Database Backup
+pg_dump -U opencbs_user -d opencbs_db -F c -f opencbs_backup_$(date +%Y%m%d).dump
+```
+
+```bash Schema-Only Backup
+pg_dump -U opencbs_user -d opencbs_db -s -f opencbs_schema.sql
+```
+
+```bash Data-Only Backup
+pg_dump -U opencbs_user -d opencbs_db -a -f opencbs_data.sql
+```
+</CodeGroup>
+
+### Restoring Backups
+
+<CodeGroup>
+```bash Restore from Custom Format
+pg_restore -U opencbs_user -d opencbs_db -c opencbs_backup_20260314.dump
+```
+
+```bash Restore from SQL File
+psql -U opencbs_user -d opencbs_db -f opencbs_schema.sql
+```
+</CodeGroup>
+
+<Warning>
+Always test backups by restoring to a separate database. Verify data integrity after restoration.
+</Warning>
+
+### Automated Backups
+
+Create a cron job for daily backups:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add daily backup at 2 AM
+0 2 * * * pg_dump -U opencbs_user -d opencbs_db -F c -f /backups/opencbs_$(date +\%Y\%m\%d).dump
+
+# Cleanup old backups (keep 30 days)
+0 3 * * * find /backups -name "opencbs_*.dump" -mtime +30 -delete
+```
+
+## Database Monitoring
+
+### Check Database Size
+
+```sql
+SELECT pg_size_pretty(pg_database_size('opencbs_db'));
+```
+
+### Monitor Active Connections
+
+```sql
+SELECT count(*) FROM pg_stat_activity WHERE datname = 'opencbs_db';
+```
+
+### Check Migration Status
+
+```sql
+SELECT version, description, installed_on, success 
+FROM flyway_schema_history 
+ORDER BY installed_rank DESC 
+LIMIT 10;
+```
+
+### View Table Sizes
+
+```sql
+SELECT 
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+LIMIT 20;
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Flyway migration fails">
+    Check the `flyway_schema_history` table for failed migrations:
+
+    ```sql
+    SELECT * FROM flyway_schema_history WHERE success = false;
+    ```
+
+    Fix the issue and either:
+    1. Manually repair: `flyway repair`
+    2. Delete failed entry and retry
+  </Accordion>
+
+  <Accordion title="Connection refused">
+    Verify PostgreSQL is running and accepting connections:
+
+    ```bash
+    sudo systemctl status postgresql
+    
+    # Check pg_hba.conf allows connection
+    sudo cat /etc/postgresql/12/main/pg_hba.conf
+    ```
+
+    Add entry if needed:
+    ```
+    host    opencbs_db    opencbs_user    127.0.0.1/32    md5
+    ```
+  </Accordion>
+
+  <Accordion title="Out of connections error">
+    Increase max_connections in postgresql.conf:
+
+    ```ini
+    max_connections = 200
+    ```
+
+    Or reduce connection pool size in application properties.
+  </Accordion>
+
+  <Accordion title="Slow queries">
+    Enable slow query logging:
+
+    ```ini
+    log_min_duration_statement = 1000  # Log queries > 1 second
+    ```
+
+    Analyze with:
+    ```sql
+    EXPLAIN ANALYZE SELECT ...;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+1. **Use strong passwords** for database users
+2. **Restrict network access** - Configure `pg_hba.conf` to allow only necessary IPs
+3. **Enable SSL/TLS** for encrypted connections:
+   ```properties
+   spring.datasource.url=jdbc:postgresql://localhost:5432/opencbs_db?ssl=true&sslmode=require
+   ```
+4. **Regular backups** - Automate and test backup restoration
+5. **Update PostgreSQL** - Keep database server updated with security patches
+6. **Audit access** - Monitor `pg_stat_activity` for suspicious connections
+7. **Principle of least privilege** - Grant only necessary permissions
+
+## Next Steps
+
+With the database configured and migrations complete:
+
+1. [Configure application properties](/deployment/build)
+2. [Deploy to cloud platforms](/deployment/cloud-deployment)
+3. Set up monitoring and alerting
+4. Configure backup automation

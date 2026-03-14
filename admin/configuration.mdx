@@ -1,0 +1,386 @@
+---
+title: 'System Configuration'
+description: 'Configure global settings and system-wide parameters in OpenCBS Cloud'
+---
+
+## Overview
+
+OpenCBS Cloud provides a comprehensive configuration system that allows you to control system-wide settings, global parameters, and operational behaviors. Configuration is managed through two primary mechanisms: **Global Settings** and **System Settings**.
+
+## Global Settings
+
+Global Settings are key-value pairs that control fundamental system behaviors and operational parameters. These settings are stored in the `global_settings` table and accessed via the `GlobalSettingsService`.
+
+### Domain Model
+
+The `GlobalSettings` entity is defined in `com.opencbs.core.domain.GlobalSettings`:
+
+```java
+@Entity
+@Table(name = "global_settings", schema = "public")
+public class GlobalSettings {
+    @Id
+    @Column(name = "name", nullable = false)
+    private String name;
+    
+    @Column(name = "type", nullable = false)
+    private String type;
+    
+    @Column(name = "value", nullable = false)
+    private String value;
+}
+```
+
+### Key Global Settings
+
+<AccordionGroup>
+  <Accordion title="DAY_CLOSURE_INIT_DATE">
+    The initial date from which day closure operations begin. This is a critical setting that defines the starting point for all financial day closure calculations.
+    
+    **Type:** DATE  
+    **Required:** Yes  
+    **Example:** `2024-01-01`
+  </Accordion>
+
+  <Accordion title="Database Connection Settings">
+    Configuration for database connection pooling, timeout values, and transaction management settings.
+  </Accordion>
+
+  <Accordion title="Integration Settings">
+    External system integration parameters including API endpoints, authentication tokens, and synchronization intervals.
+  </Accordion>
+</AccordionGroup>
+
+### Accessing Global Settings
+
+<Steps>
+  <Step title="Via REST API">
+    Retrieve all global settings:
+    ```bash
+    GET /api/global-settings
+    ```
+    
+    Retrieve a specific setting by name:
+    ```bash
+    GET /api/global-settings/{name}
+    ```
+  </Step>
+
+  <Step title="Programmatically">
+    Use the `GlobalSettingsService` in your code:
+    
+    ```java
+    @Autowired
+    private GlobalSettingsService globalSettingsService;
+    
+    // Get setting value
+    String initDate = globalSettingsService.getSettingValue("DAY_CLOSURE_INIT_DATE");
+    
+    // Find setting object
+    Optional<GlobalSettings> setting = globalSettingsService.findOne("DAY_CLOSURE_INIT_DATE");
+    ```
+  </Step>
+</Steps>
+
+### Controller Reference
+
+The `GlobalSettingsController` (located at `com.opencbs.core.controllers.GlobalSettingsController`) provides the following endpoints:
+
+- `GET /api/global-settings` - List all global settings
+- `GET /api/global-settings/{name}` - Get a specific setting
+
+<Note>
+  Global settings are read-only through the API. Updates typically require database migrations or direct database access with proper authorization.
+</Note>
+
+## System Settings
+
+System Settings provide configurable parameters for system behavior, security policies, and user interface preferences. Unlike Global Settings, System Settings can be modified through the admin interface.
+
+### Domain Model
+
+The `SystemSettings` entity (`com.opencbs.core.domain.SystemSettings`) provides structured configuration:
+
+```java
+@Entity
+@Table(name = "system_settings")
+public class SystemSettings extends BaseEntity {
+    @Enumerated(EnumType.STRING)
+    @Column(name = "name", nullable = false)
+    private SystemSettingsName name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private CustomFieldType type;
+    
+    @Column(name = "value", nullable = false)
+    private String value;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "section", nullable = false)
+    private SystemSettingsSections section;
+}
+```
+
+### Available System Settings
+
+System settings are defined in the `SystemSettingsName` enum:
+
+<CardGroup cols={2}>
+  <Card title="Password Policy" icon="lock">
+    - `PASSWORD_LENGTH` - Minimum password length
+    - `UPPER_CASE` - Require uppercase letters
+    - `NUMBERS` - Require numeric characters
+    - `EXPIRE_PERIOD` - Password expiration period (days)
+  </Card>
+
+  <Card title="Session Management" icon="clock">
+    - `EXPIRATION_SESSION_TIME_IN_MINUTES` - Session timeout duration
+    - `FIRST_LOG_IN` - Force password change on first login
+  </Card>
+
+  <Card title="Display Formats" icon="palette">
+    - `DATE_FORMAT` - System-wide date format
+    - `TIME_FORMAT` - System-wide time format
+    - `NUMBER_FORMAT` - Numeric display format
+  </Card>
+</CardGroup>
+
+### Managing System Settings
+
+<Steps>
+  <Step title="Retrieve Current Settings">
+    ```bash
+    GET /api/system-settings
+    ```
+    
+    Returns an array of all system settings with their current values.
+  </Step>
+
+  <Step title="Update Settings">
+    ```bash
+    PUT /api/system-settings
+    ```
+    
+    Request body:
+    ```json
+    [
+      {
+        "customField": {
+          "id": 1
+        },
+        "value": "12"
+      },
+      {
+        "customField": {
+          "id": 2
+        },
+        "value": "true"
+      }
+    ]
+    ```
+  </Step>
+
+  <Step title="Validate Changes">
+    The `SystemSettingsValidator` ensures all updates meet validation requirements before being persisted.
+  </Step>
+</Steps>
+
+<Warning>
+  Changing system settings affects all users immediately. Always test configuration changes in a non-production environment first.
+</Warning>
+
+## Configuration Properties
+
+Application-level configurations are managed through Spring Boot properties and can be customized via environment variables or configuration files.
+
+### Day Closure Configuration
+
+Example configuration in `application.properties`:
+
+```properties
+# Day closure auto-start configuration
+day-closure.auto-start=false
+day-closure.auto-start-time=0 0 2 * * *
+day-closure.error-to-emails=admin@example.com,finance@example.com
+```
+
+These properties are injected via the `DayClosureProperties` class:
+
+```java
+@ConfigurationProperties(prefix = "day-closure")
+public class DayClosureProperties {
+    private Boolean autoStart;
+    private String autoStartTime;
+    private List<String> errorToEmails;
+}
+```
+
+### Database Configuration
+
+```properties
+# Database connection
+spring.datasource.url=jdbc:postgresql://localhost:5432/opencbs
+spring.datasource.username=opencbs_user
+spring.datasource.password=${DB_PASSWORD}
+
+# Connection pooling
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=30000
+```
+
+### Flyway Migration
+
+Database schema migrations are managed through Flyway:
+
+```properties
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
+spring.flyway.locations=classpath:db/migration
+```
+
+The `FlywayConfig` class (`com.opencbs.core.configs.FlywayConfig`) manages migration strategy.
+
+## Advanced Configuration
+
+### RabbitMQ Messaging
+
+For real-time messaging and day closure notifications:
+
+```properties
+# RabbitMQ configuration
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+```
+
+Configured via `RabbitMQConfiguration` in `com.opencbs.core.configs`.
+
+### Task Executor Configuration
+
+For asynchronous processing (like day closure operations):
+
+```java
+@Configuration
+public class TaskExecutorConfig {
+    @Bean(name = "taskExecutor")
+    public Executor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
+        return executor;
+    }
+}
+```
+
+### Audit Configuration
+
+Audit logging is configured via `AuditConfig`:
+
+```java
+@Configuration
+@EnableJpaAuditing
+public class AuditConfig {
+    // Audit configuration for entity change tracking
+}
+```
+
+## Module Types
+
+Permissions and features are organized by module types (defined in `ModuleType` enum):
+
+```java
+public enum ModuleType {
+    AUDIT_TRAIL,
+    PROFILES,
+    LOANS,
+    GENERAL_LEDGER,
+    CHART_OF_ACCOUNTS,
+    REPORTS,
+    CONFIGURATIONS,
+    DAY_CLOSURE,
+    TELLER_MANAGEMENT,
+    SAVINGS,
+    MAKER_CHECKER,
+    SETTINGS
+}
+```
+
+Each module can have specific configuration requirements and permissions.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Configuration Management" icon="gear">
+    - Use environment variables for sensitive data
+    - Document all custom configuration changes
+    - Version control configuration templates
+    - Test configuration changes in staging first
+  </Card>
+
+  <Card title="Security" icon="shield">
+    - Never commit passwords to source control
+    - Use strong password policies
+    - Regularly review system settings
+    - Audit configuration changes
+  </Card>
+
+  <Card title="Performance" icon="gauge">
+    - Optimize database connection pool sizes
+    - Configure appropriate session timeouts
+    - Monitor system resource usage
+    - Tune async task executor settings
+  </Card>
+
+  <Card title="Maintenance" icon="wrench">
+    - Keep configuration documentation updated
+    - Regular backups of settings
+    - Plan configuration changes during maintenance windows
+    - Monitor logs after configuration updates
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Setting Changes Not Taking Effect">
+    **Symptoms:** Modified settings don't reflect in application behavior
+    
+    **Solutions:**
+    - Verify settings were saved successfully via API
+    - Check application logs for validation errors
+    - Restart application if configuration requires it
+    - Clear application cache if enabled
+  </Accordion>
+
+  <Accordion title="Database Connection Errors">
+    **Symptoms:** Application fails to start or connect to database
+    
+    **Solutions:**
+    - Verify database connection settings
+    - Ensure database server is running
+    - Check firewall and network connectivity
+    - Validate database credentials
+  </Accordion>
+
+  <Accordion title="Day Closure Auto-Start Not Working">
+    **Symptoms:** Scheduled day closure doesn't execute
+    
+    **Solutions:**
+    - Verify `day-closure.auto-start` is set to `true`
+    - Check cron expression in `day-closure.auto-start-time`
+    - Review application logs for scheduler errors
+    - Ensure system clock is correct
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+- [User Roles & Permissions](/admin/user-roles-permissions)
+- [Day Closure Process](/admin/day-closure)
+- [Custom Fields Management](/admin/custom-fields)

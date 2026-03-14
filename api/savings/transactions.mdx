@@ -1,0 +1,659 @@
+---
+title: "Savings Transactions"
+description: "API endpoints for processing deposits, withdrawals, and teller operations"
+---
+
+## Overview
+
+The Savings Transactions API provides endpoints for processing financial transactions on savings accounts. This includes deposits, withdrawals, and teller-based operations.
+
+## Transaction Types
+
+- **Deposit** - Add funds to a savings account
+- **Withdrawal** - Remove funds from a savings account
+- **Teller Operations** - Process transactions through a teller till with cash tracking
+
+## Deposit to Savings Account
+
+Add funds to an active savings account. Deposit fees (if configured) are automatically applied.
+
+<Note>
+  Requires `SAVING_DEPOSIT` permission. The account must be in ACTIVE status and not locked.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/savings/103/deposit?amount=250.00&date=2024-01-20T10:30:00" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/savings/103/deposit?amount=250.00&date=2024-01-20T10:30:00',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const account = await response.json();
+```
+
+```python Python
+import requests
+from datetime import datetime
+
+response = requests.post(
+    'https://api.opencbs.com/api/savings/103/deposit',
+    params={
+        'amount': 250.00,
+        'date': '2024-01-20T10:30:00'
+    },
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+account = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings account ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="amount" type="decimal" required>
+  Deposit amount (must be within product's min/max deposit limits)
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Transaction date and time in ISO 8601 format (`yyyy-MM-dd'T'HH:mm:ss`). Must be on or after the account opening date.
+</ParamField>
+
+### Response
+
+Returns the updated `SavingDetailsDto` object with the new balance.
+
+<ResponseField name="id" type="long">
+  Account identifier
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Account code
+</ResponseField>
+
+<ResponseField name="savingBalance" type="decimal">
+  Updated account balance after deposit and fees
+</ResponseField>
+
+<ResponseField name="accruedInterest" type="decimal">
+  Current accrued interest
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Account status (should be ACTIVE)
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "id": 103,
+  "code": "SAV-00103",
+  "profileName": "John Doe",
+  "savingProductName": "Basic Savings",
+  "status": "ACTIVE",
+  "savingBalance": 738.00,
+  "accruedInterest": 2.15,
+  "interestRate": 3.5,
+  "openDate": "2024-01-15T09:00:00"
+}
+```
+
+### Fee Calculation
+
+Deposit fees are calculated based on the account's configuration:
+
+```
+Total Fee = (Amount × depositFeeRate / 100) + depositFeeFlat
+```
+
+For example, with a $250 deposit:
+- Deposit fee rate: 0.0%
+- Deposit fee flat: $2.00
+- Total fee: $2.00
+- Net deposit: $248.00
+
+### Validation Rules
+
+- Account must be in ACTIVE status
+- Account must not be locked
+- Amount must be between product's `depositAmountMin` and `depositAmountMax`
+- Transaction date must be on or after the account opening date
+- Transaction date cannot be in the future
+
+---
+
+## Withdraw from Savings Account
+
+Remove funds from an active savings account. Withdrawal fees (if configured) are automatically applied and minimum balance rules are enforced.
+
+<Note>
+  Requires `SAVING_WITHDRAW` permission. The account must be in ACTIVE status and not locked.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/savings/103/withdraw?amount=100.00&date=2024-01-21T14:15:00" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/savings/103/withdraw?amount=100.00&date=2024-01-21T14:15:00',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const account = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/savings/103/withdraw',
+    params={
+        'amount': 100.00,
+        'date': '2024-01-21T14:15:00'
+    },
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+account = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings account ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="amount" type="decimal" required>
+  Withdrawal amount (must be within product's min/max withdrawal limits)
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Transaction date and time in ISO 8601 format (`yyyy-MM-dd'T'HH:mm:ss`). Must be on or after the account opening date.
+</ParamField>
+
+### Response
+
+Returns the updated `SavingDetailsDto` object with the new balance.
+
+### Example Response
+
+```json
+{
+  "id": 103,
+  "code": "SAV-00103",
+  "profileName": "John Doe",
+  "savingProductName": "Basic Savings",
+  "status": "ACTIVE",
+  "savingBalance": 633.00,
+  "accruedInterest": 2.15,
+  "interestRate": 3.5,
+  "openDate": "2024-01-15T09:00:00"
+}
+```
+
+### Fee Calculation
+
+Withdrawal fees are calculated based on the account's configuration:
+
+```
+Total Fee = (Amount × withdrawalFeeRate / 100) + withdrawalFeeFlat
+Total Withdrawal = Amount + Total Fee
+```
+
+For example, with a $100 withdrawal:
+- Withdrawal fee rate: 1.0%
+- Withdrawal fee flat: $5.00
+- Total fee: (100 × 0.01) + 5.00 = $6.00
+- Total debited from account: $106.00
+- Customer receives: $100.00
+
+### Validation Rules
+
+- Account must be in ACTIVE status
+- Account must not be locked
+- Amount must be between product's `withdrawalAmountMin` and `withdrawalAmountMax`
+- Available balance must be sufficient for withdrawal amount plus fees
+- Remaining balance after withdrawal must meet minimum balance requirements (if configured)
+- Transaction date must be on or after the account opening date
+- Transaction date cannot be in the future
+
+### Insufficient Balance Error
+
+If the account has insufficient funds, the API returns a 400 error:
+
+```json
+{
+  "error": "INSUFFICIENT_BALANCE",
+  "message": "Withdrawal amount plus fees exceeds available balance. Available: 633.00, Required: 1106.00",
+  "timestamp": "2024-01-21T14:15:00Z"
+}
+```
+
+---
+
+## Teller Operations
+
+Teller operations process deposits and withdrawals through a teller till, integrating with cash management and providing enhanced tracking.
+
+### Get Savings with Account Information
+
+Retrieve savings accounts with their associated general ledger account information for teller operations.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.opencbs.com/api/tills/savings-with-account?search=john&page=0&size=20" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/tills/savings-with-account?search=john&page=0&size=20',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const accounts = await response.json();
+```
+</CodeGroup>
+
+#### Query Parameters
+
+<ParamField query="search" type="string">
+  Search term to filter accounts
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+#### Response
+
+Returns a paginated list of `SavingWithAccountDto` objects.
+
+```json
+{
+  "content": [
+    {
+      "id": 103,
+      "code": "SAV-00103",
+      "profileName": "John Doe",
+      "savingProductName": "Basic Savings",
+      "accountId": 1100,
+      "accountNumber": "1100-001",
+      "balance": 633.00
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "number": 0,
+  "size": 20
+}
+```
+
+---
+
+### Deposit via Teller
+
+Process a deposit transaction through a teller till. This operation tracks the cash movement in the till and creates the appropriate accounting entries.
+
+<Note>
+  Requires `DEPOSIT-SAVING` permission in the TELLER_MANAGEMENT module.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/tills/123/operations/deposit-saving" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "savingId": 103,
+    "amount": 300.00,
+    "date": "2024-01-22T11:45:00",
+    "description": "Cash deposit"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/tills/123/operations/deposit-saving',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      savingId: 103,
+      amount: 300.00,
+      date: '2024-01-22T11:45:00',
+      description: 'Cash deposit'
+    })
+  }
+);
+const operationId = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/tills/123/operations/deposit-saving',
+    json={
+        'savingId': 103,
+        'amount': 300.00,
+        'date': '2024-01-22T11:45:00',
+        'description': 'Cash deposit'
+    },
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+operation_id = response.json()
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Teller till ID
+</ParamField>
+
+#### Request Body
+
+<ParamField body="savingId" type="long" required>
+  Savings account ID to deposit to
+</ParamField>
+
+<ParamField body="amount" type="decimal" required>
+  Deposit amount
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  Transaction date and time (ISO 8601 format: `yyyy-MM-dd'T'HH:mm:ss`)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Transaction description or notes
+</ParamField>
+
+<ParamField body="initiatorId" type="long">
+  User ID of the person initiating the transaction (optional, defaults to current user)
+</ParamField>
+
+#### Response
+
+Returns the operation ID.
+
+```json
+7825
+```
+
+#### Operation Flow
+
+1. Validates the deposit amount against account and product limits
+2. Increases the till's cash balance by the deposit amount
+3. Credits the savings account with the net deposit (after fees)
+4. Creates accounting entries for the transaction
+5. Returns the operation ID for tracking
+
+---
+
+### Withdraw via Teller
+
+Process a withdrawal transaction through a teller till. This operation tracks the cash movement from the till and creates the appropriate accounting entries.
+
+<Note>
+  Requires `WITHDRAW-SAVING` permission in the TELLER_MANAGEMENT module.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/tills/123/operations/withdraw-saving" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "savingId": 103,
+    "amount": 150.00,
+    "date": "2024-01-22T15:30:00",
+    "description": "Cash withdrawal"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/tills/123/operations/withdraw-saving',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      savingId: 103,
+      amount: 150.00,
+      date: '2024-01-22T15:30:00',
+      description: 'Cash withdrawal'
+    })
+  }
+);
+const operationId = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/tills/123/operations/withdraw-saving',
+    json={
+        'savingId': 103,
+        'amount': 150.00,
+        'date': '2024-01-22T15:30:00',
+        'description': 'Cash withdrawal'
+    },
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+operation_id = response.json()
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Teller till ID
+</ParamField>
+
+#### Request Body
+
+<ParamField body="savingId" type="long" required>
+  Savings account ID to withdraw from
+</ParamField>
+
+<ParamField body="amount" type="decimal" required>
+  Withdrawal amount (amount customer receives, excluding fees)
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  Transaction date and time (ISO 8601 format: `yyyy-MM-dd'T'HH:mm:ss`)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Transaction description or notes
+</ParamField>
+
+<ParamField body="initiatorId" type="long">
+  User ID of the person initiating the transaction (optional, defaults to current user)
+</ParamField>
+
+#### Response
+
+Returns the operation ID.
+
+```json
+7826
+```
+
+#### Operation Flow
+
+1. Validates the withdrawal amount against account balance and product limits
+2. Calculates total amount to debit including fees
+3. Decreases the till's cash balance by the withdrawal amount
+4. Debits the savings account with the total amount (withdrawal + fees)
+5. Creates accounting entries for the transaction
+6. Returns the operation ID for tracking
+
+#### Till Balance Validation
+
+If the till has insufficient cash, the operation fails:
+
+```json
+{
+  "error": "INSUFFICIENT_TILL_BALANCE",
+  "message": "Till does not have sufficient cash. Available: 5000.00, Required: 150.00",
+  "timestamp": "2024-01-22T15:30:00Z"
+}
+```
+
+---
+
+## Transaction Best Practices
+
+### Idempotency
+
+Transaction endpoints are not idempotent. Each call creates a new transaction. Implement client-side duplicate detection if needed.
+
+### Date Handling
+
+- Always use the institution's timezone for transaction dates
+- Transaction dates cannot be in the future
+- Transaction dates must be on or after the account opening date
+- For end-of-day processing, use time component `23:59:59`
+
+### Error Handling
+
+Common validation errors:
+
+| Error Code | Description | Resolution |
+|------------|-------------|------------|
+| `INSUFFICIENT_BALANCE` | Account lacks funds for withdrawal | Reduce withdrawal amount or deposit more funds |
+| `ACCOUNT_LOCKED` | Account is locked | Unlock the account before processing transactions |
+| `ACCOUNT_NOT_ACTIVE` | Account is not in ACTIVE status | Open the account or reactivate it |
+| `AMOUNT_BELOW_MINIMUM` | Amount is below product minimum | Increase the transaction amount |
+| `AMOUNT_ABOVE_MAXIMUM` | Amount exceeds product maximum | Reduce the transaction amount or split into multiple transactions |
+| `INVALID_DATE` | Date is invalid or in the future | Use a valid date in the past |
+| `MINIMUM_BALANCE_VIOLATION` | Withdrawal would violate minimum balance | Reduce withdrawal amount to maintain minimum balance |
+
+### Concurrent Transactions
+
+The system uses optimistic locking to handle concurrent transactions on the same account. If a conflict occurs, retry the operation with updated account data.
+
+### Audit Trail
+
+All transactions are fully auditable:
+- User who initiated the transaction is recorded
+- Transaction timestamp is stored
+- Accounting entries provide complete audit trail
+- Use the "Get Account Entries" endpoint to retrieve transaction history
+
+---
+
+## Complete Transaction Example
+
+Here's a complete workflow for processing deposits and withdrawals:
+
+```javascript
+// 1. Create a savings account
+const createResponse = await fetch('https://api.opencbs.com/api/savings', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    profileId: 45,
+    savingProductId: 1,
+    savingOfficerId: 10,
+    interestRate: 3.5,
+    openDate: '2024-01-15T09:00:00'
+  })
+});
+const account = await createResponse.json();
+console.log('Account created:', account.id);
+
+// 2. Open the account with initial deposit
+const openResponse = await fetch(
+  `https://api.opencbs.com/api/savings/${account.id}/open?initialAmount=500.00`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const openedAccount = await openResponse.json();
+console.log('Account opened with balance:', openedAccount.savingBalance);
+
+// 3. Make a deposit
+const depositResponse = await fetch(
+  `https://api.opencbs.com/api/savings/${account.id}/deposit?amount=250.00&date=2024-01-20T10:30:00`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const afterDeposit = await depositResponse.json();
+console.log('Balance after deposit:', afterDeposit.savingBalance);
+
+// 4. Make a withdrawal
+const withdrawResponse = await fetch(
+  `https://api.opencbs.com/api/savings/${account.id}/withdraw?amount=100.00&date=2024-01-21T14:15:00`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const afterWithdrawal = await withdrawResponse.json();
+console.log('Balance after withdrawal:', afterWithdrawal.savingBalance);
+
+// 5. View transaction history
+const historyResponse = await fetch(
+  `https://api.opencbs.com/api/savings/${account.id}/entries?page=0&size=50`,
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const history = await historyResponse.json();
+console.log('Transaction count:', history.totalElements);
+```

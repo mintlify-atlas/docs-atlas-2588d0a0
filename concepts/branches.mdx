@@ -1,0 +1,889 @@
+---
+title: Branch Management
+description: Branch management and multi-branch operations in OpenCBS Cloud
+---
+
+OpenCBS Cloud supports multi-branch operations, enabling microfinance institutions to manage multiple locations from a single system. Each branch operates independently while sharing centralized configuration and reporting.
+
+## Branch Concept
+
+A **branch** represents a physical or organizational location where the MFI conducts business. Branches serve as the primary organizational unit for:
+
+- Client profiles
+- Loan portfolios
+- User assignments
+- Accounting entries
+- Reporting segments
+- Permission boundaries
+
+<Info>
+Every profile, user, and account in OpenCBS must be associated with a branch. This ensures proper segregation and enables branch-level reporting.
+</Info>
+
+## Branch Entity
+
+### Domain Model
+
+```java
+package com.opencbs.core.domain;
+
+@Entity
+@Table(name = "branches")
+public class Branch extends NamedBaseEntity {
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, 
+               orphanRemoval = true)
+    private List<BranchCustomFieldValue> customFieldValues;
+    
+    @Override
+    public String toString() {
+        return this.getName();
+    }
+}
+```
+
+**Inherited from NamedBaseEntity:**
+```java
+public abstract class NamedBaseEntity extends BaseEntity {
+    
+    @Column(name = "name", nullable = false)
+    private String name;
+    
+    // Getter and setter methods
+}
+```
+
+**Inherited from BaseEntity:**
+```java
+public abstract class BaseEntity {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+}
+```
+
+### Custom Fields Support
+
+Branches support custom fields for storing location-specific data:
+
+```java
+@OneToMany(mappedBy = "owner", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, 
+           orphanRemoval = true)
+private List<BranchCustomFieldValue> customFieldValues;
+```
+
+**Common Custom Fields:**
+- `address`: Physical address
+- `city`: City/town location
+- `region`: State/province/region
+- `postal_code`: ZIP/postal code
+- `phone`: Branch phone number
+- `email`: Branch email
+- `manager`: Branch manager name
+- `opening_date`: Date branch opened
+- `license_number`: Branch license/registration
+- `latitude`: GPS latitude
+- `longitude`: GPS longitude
+
+### Custom Field Value Entity
+
+```java
+@Entity
+@Table(name = "branch_custom_field_values")
+public class BranchCustomFieldValue extends CustomFieldValue {
+    
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private Branch owner;
+    
+    @ManyToOne
+    @JoinColumn(name = "field_id")
+    private BranchCustomField customField;
+    
+    @Column(name = "value")
+    private String value;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private EntityStatus status;
+}
+```
+
+## Branch Service
+
+### Service Implementation
+
+```java
+package com.opencbs.core.services;
+
+@Service
+public class BranchService {
+    
+    private final BranchRepository branchRepository;
+    
+    @Autowired
+    public BranchService(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
+    }
+    
+    @Transactional
+    public Branch create(Branch branch) {
+        this.updateBranchCustomFields(branch);
+        branch.setId(null);
+        return this.branchRepository.save(branch);
+    }
+    
+    @Transactional
+    public Branch update(Branch branch) {
+        this.updateBranchCustomFields(branch);
+        return this.branchRepository.save(branch);
+    }
+    
+    public Optional<Branch> findByName(String name) {
+        return this.branchRepository.findByName(name);
+    }
+    
+    public Optional<Branch> findOne(Long id) {
+        return Optional.of(this.branchRepository.findOne(id));
+    }
+    
+    public Page<Branch> findAll(Pageable pageable) {
+        return this.branchRepository.findAll(pageable);
+    }
+    
+    public Page<Branch> findByNameContaining(Pageable pageable, String search) {
+        if (search == null) search = "";
+        return this.branchRepository.getBySearchPattern(pageable, search);
+    }
+    
+    public List<Branch> findAll() {
+        return this.branchRepository.findAll();
+    }
+    
+    private void updateBranchCustomFields(Branch branch) {
+        this.getBranchCustomFields(branch)
+                .forEach(x -> {
+                    x.setCreatedBy(UserHelper.getCurrentUser());
+                    x.setCreatedAt(DateHelper.getLocalDateTimeNow());
+                    x.setVerifiedBy(UserHelper.getCurrentUser());
+                    x.setVerifiedAt(DateHelper.getLocalDateTimeNow());
+                    x.setStatus(EntityStatus.LIVE);
+                });
+    }
+    
+    private List<BranchCustomFieldValue> getBranchCustomFields(Branch branch) {
+        return branch.getCustomFieldValues();
+    }
+}
+```
+
+### Repository Interface
+
+```java
+package com.opencbs.core.repositories;
+
+public interface BranchRepository extends 
+    JpaRepository<Branch, Long>,
+    QueryDslPredicateExecutor<Branch> {
+    
+    Optional<Branch> findByName(String name);
+    
+    @Query("SELECT b FROM Branch b WHERE LOWER(b.name) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Branch> getBySearchPattern(Pageable pageable, @Param("search") String search);
+}
+```
+
+## Branch Relationships
+
+### Branch-to-Profile Association
+
+Every profile must belong to a branch:
+
+```java
+@Entity
+@Table(name = "profiles")
+public class Profile extends CreationInfoEntity {
+    
+    @ManyToOne
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
+    
+    // Other fields...
+}
+```
+
+**Use Cases:**
+- Client registration at specific location
+- Portfolio segmentation by geography
+- Loan officer assignment by branch
+- Performance tracking per branch
+
+### Branch-to-User Association
+
+Users are typically assigned to one primary branch:
+
+```java
+@Entity
+@Table(name = "users")
+public class User extends BaseEntity {
+    
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+    
+    // Other fields...
+}
+```
+
+**Implications:**
+- Users see clients from their assigned branch
+- Loan processing within branch boundaries
+- Reporting filtered by user's branch
+- Permission scoping by branch
+
+### Branch-to-Account Association
+
+Accounting entries can be branch-specific:
+
+```java
+@Entity
+@Table(name = "accounts")
+public class Account extends NamedBaseEntity {
+    
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+    
+    // Other fields...
+}
+```
+
+**Purpose:**
+- Branch-level profit and loss
+- Inter-branch transactions
+- Branch balance sheets
+- Cost center accounting
+
+## Multi-Branch Operations
+
+### Branch Hierarchy
+
+While OpenCBS branches are flat by default, you can implement hierarchy through custom fields:
+
+```java
+// Example: Regional structure using custom fields
+Branch headOffice = new Branch();
+headOffice.setName("Head Office");
+
+Branch regionalOffice = new Branch();
+regionalOffice.setName("North Region Office");
+addCustomFieldValue(regionalOffice, "parent_branch", "Head Office");
+
+Branch localBranch = new Branch();
+localBranch.setName("Downtown Branch");
+addCustomFieldValue(localBranch, "parent_branch", "North Region Office");
+addCustomFieldValue(localBranch, "region", "North");
+```
+
+### Branch-Level Permissions
+
+Control user access by branch:
+
+```java
+@Service
+public class ProfileSecurityService {
+    
+    public boolean canAccessProfile(User user, Profile profile) {
+        // Standard users can only access profiles in their branch
+        if (user.getRole().getName().equals("BRANCH_MANAGER")) {
+            return user.getBranch().getId().equals(profile.getBranch().getId());
+        }
+        
+        // Admin users can access all branches
+        if (user.getRole().getName().equals("ADMIN")) {
+            return true;
+        }
+        
+        return false;
+    }
+}
+```
+
+### Cross-Branch Transactions
+
+Inter-branch transfers require special handling:
+
+```java
+@Service
+public class TransferService {
+    
+    @Transactional
+    public void transferBetweenBranches(
+            Account sourceBranch,
+            Account targetBranch,
+            BigDecimal amount,
+            String description) {
+        
+        // Debit source branch
+        AccountingEntry debitEntry = new AccountingEntry();
+        debitEntry.setAccount(sourceBranch);
+        debitEntry.setDebitAmount(amount);
+        debitEntry.setDescription(description);
+        debitEntry.setBranch(sourceBranch.getBranch());
+        
+        // Credit target branch
+        AccountingEntry creditEntry = new AccountingEntry();
+        creditEntry.setAccount(targetBranch);
+        creditEntry.setCreditAmount(amount);
+        creditEntry.setDescription(description);
+        creditEntry.setBranch(targetBranch.getBranch());
+        
+        accountingEntryService.createEntries(
+            Arrays.asList(debitEntry, creditEntry)
+        );
+    }
+}
+```
+
+### Branch Consolidation
+
+Aggregate data across all branches:
+
+```java
+@Service
+public class ConsolidatedReportService {
+    
+    public BranchPerformanceReport generateConsolidatedReport(
+            LocalDate startDate, 
+            LocalDate endDate) {
+        
+        List<Branch> allBranches = branchService.findAll();
+        BranchPerformanceReport consolidated = new BranchPerformanceReport();
+        
+        for (Branch branch : allBranches) {
+            BranchMetrics metrics = calculateBranchMetrics(
+                branch, startDate, endDate
+            );
+            consolidated.addBranchMetrics(branch.getName(), metrics);
+        }
+        
+        return consolidated;
+    }
+    
+    private BranchMetrics calculateBranchMetrics(
+            Branch branch,
+            LocalDate startDate,
+            LocalDate endDate) {
+        
+        BranchMetrics metrics = new BranchMetrics();
+        
+        // Active clients
+        metrics.setActiveClients(
+            profileRepository.countByBranchAndStatus(
+                branch, EntityStatus.LIVE
+            )
+        );
+        
+        // Loan portfolio
+        metrics.setLoanPortfolio(
+            loanRepository.sumOutstandingBalanceByBranch(branch)
+        );
+        
+        // Savings deposits
+        metrics.setSavingsDeposits(
+            savingRepository.sumBalanceByBranch(branch)
+        );
+        
+        // Disbursements
+        metrics.setDisbursements(
+            loanEventRepository.sumDisbursementsByBranchAndDateRange(
+                branch, startDate, endDate
+            )
+        );
+        
+        return metrics;
+    }
+}
+```
+
+## Branch Configuration
+
+### Creating a Branch
+
+```java
+// Backend service
+@Service
+public class BranchConfigurationService {
+    
+    @Transactional
+    public Branch setupNewBranch(BranchSetupDto dto) {
+        // 1. Create branch entity
+        Branch branch = new Branch();
+        branch.setName(dto.getName());
+        
+        // 2. Add custom field values
+        for (CustomFieldValueDto fieldValue : dto.getCustomFields()) {
+            BranchCustomFieldValue value = new BranchCustomFieldValue();
+            value.setCustomField(
+                customFieldService.findByName(fieldValue.getFieldName())
+            );
+            value.setValue(fieldValue.getValue());
+            value.setStatus(EntityStatus.LIVE);
+            value.setOwner(branch);
+            branch.getCustomFieldValues().add(value);
+        }
+        
+        // 3. Save branch
+        Branch savedBranch = branchService.create(branch);
+        
+        // 4. Create default accounts for branch
+        createDefaultBranchAccounts(savedBranch);
+        
+        // 5. Assign initial users
+        assignBranchManager(savedBranch, dto.getManagerUserId());
+        
+        return savedBranch;
+    }
+    
+    private void createDefaultBranchAccounts(Branch branch) {
+        // Cash account
+        Account cashAccount = new Account();
+        cashAccount.setName(branch.getName() + " - Cash");
+        cashAccount.setNumber("1100-" + branch.getId());
+        cashAccount.setIsDebit(true);
+        cashAccount.setBranch(branch);
+        accountService.create(cashAccount);
+        
+        // Loan portfolio account
+        Account loanAccount = new Account();
+        loanAccount.setName(branch.getName() + " - Loan Portfolio");
+        loanAccount.setNumber("1300-" + branch.getId());
+        loanAccount.setIsDebit(true);
+        loanAccount.setBranch(branch);
+        accountService.create(loanAccount);
+    }
+}
+```
+
+### Branch REST Endpoint
+
+```java
+@RestController
+@RequestMapping("/api/branches")
+public class BranchController extends BaseController {
+    
+    private final BranchService branchService;
+    private final BranchMapper branchMapper;
+    
+    @GetMapping
+    public Page<BranchDto> getBranches(
+            @RequestParam(required = false) String search,
+            Pageable pageable) {
+        
+        Page<Branch> branches = search != null 
+            ? branchService.findByNameContaining(pageable, search)
+            : branchService.findAll(pageable);
+        
+        return branches.map(branchMapper::toDto);
+    }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<BranchDto> getBranch(@PathVariable Long id) {
+        return branchService.findOne(id)
+            .map(branchMapper::toDto)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+    }
+    
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BranchDto> createBranch(@RequestBody BranchDto dto) {
+        Branch branch = branchMapper.toEntity(dto);
+        Branch created = branchService.create(branch);
+        return ResponseEntity.created(
+            URI.create("/api/branches/" + created.getId())
+        ).body(branchMapper.toDto(created));
+    }
+    
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BranchDto> updateBranch(
+            @PathVariable Long id,
+            @RequestBody BranchDto dto) {
+        
+        return branchService.findOne(id)
+            .map(existing -> {
+                branchMapper.updateEntity(dto, existing);
+                Branch updated = branchService.update(existing);
+                return ResponseEntity.ok(branchMapper.toDto(updated));
+            })
+            .orElse(ResponseEntity.notFound().build());
+    }
+}
+```
+
+## Branch Reporting
+
+### Branch Performance Metrics
+
+Key performance indicators tracked per branch:
+
+<CardGroup cols={2}>
+  <Card title="Portfolio Metrics" icon="chart-line">
+    - Active loan accounts
+    - Outstanding loan balance
+    - Portfolio at risk (PAR)
+    - Write-off ratio
+  </Card>
+  <Card title="Client Metrics" icon="users">
+    - Active clients
+    - New clients (period)
+    - Client retention rate
+    - Clients per loan officer
+  </Card>
+  <Card title="Financial Metrics" icon="dollar-sign">
+    - Disbursements
+    - Collections
+    - Interest income
+    - Operating expenses
+  </Card>
+  <Card title="Operational Metrics" icon="gauge">
+    - Loan applications
+    - Approval rate
+    - Average processing time
+    - Staff productivity
+  </Card>
+</CardGroup>
+
+### Branch Comparison Report
+
+```java
+@Service
+public class BranchComparisonService {
+    
+    public List<BranchComparison> compareBranches(
+            LocalDate reportDate) {
+        
+        return branchService.findAll().stream()
+            .map(branch -> {
+                BranchComparison comparison = new BranchComparison();
+                comparison.setBranchName(branch.getName());
+                
+                // Client metrics
+                comparison.setActiveClients(
+                    profileRepository.countActiveByBranch(branch, reportDate)
+                );
+                
+                // Portfolio metrics
+                comparison.setLoanPortfolio(
+                    loanRepository.sumOutstandingByBranch(branch, reportDate)
+                );
+                comparison.setParRate(
+                    calculatePAR(branch, reportDate)
+                );
+                
+                // Financial metrics
+                comparison.setNetIncome(
+                    calculateNetIncome(branch, reportDate)
+                );
+                
+                // Efficiency metrics
+                comparison.setOperatingExpenseRatio(
+                    calculateOER(branch, reportDate)
+                );
+                
+                return comparison;
+            })
+            .sorted(Comparator.comparing(BranchComparison::getLoanPortfolio).reversed())
+            .collect(Collectors.toList());
+    }
+}
+```
+
+### Branch Profitability
+
+```java
+public class BranchProfitabilityCalculator {
+    
+    public BranchPL calculateProfitAndLoss(
+            Branch branch,
+            LocalDate startDate,
+            LocalDate endDate) {
+        
+        BranchPL pl = new BranchPL();
+        
+        // Revenue
+        BigDecimal interestIncome = accountingEntryRepository
+            .sumCreditsByAccountTypeAndBranch(
+                AccountType.INTEREST_INCOME, branch, startDate, endDate
+            );
+        BigDecimal feeIncome = accountingEntryRepository
+            .sumCreditsByAccountTypeAndBranch(
+                AccountType.FEE_INCOME, branch, startDate, endDate
+            );
+        pl.setTotalRevenue(interestIncome.add(feeIncome));
+        
+        // Expenses
+        BigDecimal financialExpenses = accountingEntryRepository
+            .sumDebitsByAccountTypeAndBranch(
+                AccountType.FINANCIAL_EXPENSE, branch, startDate, endDate
+            );
+        BigDecimal operatingExpenses = accountingEntryRepository
+            .sumDebitsByAccountTypeAndBranch(
+                AccountType.OPERATING_EXPENSE, branch, startDate, endDate
+            );
+        pl.setTotalExpenses(financialExpenses.add(operatingExpenses));
+        
+        // Net income
+        pl.setNetIncome(pl.getTotalRevenue().subtract(pl.getTotalExpenses()));
+        
+        // ROA (Return on Assets)
+        BigDecimal totalAssets = accountingEntryRepository
+            .sumBalancesByAccountTypeAndBranch(
+                AccountType.ASSET, branch, endDate
+            );
+        pl.setReturnOnAssets(
+            pl.getNetIncome().divide(totalAssets, 4, RoundingMode.HALF_UP)
+        );
+        
+        return pl;
+    }
+}
+```
+
+## Frontend Branch Management
+
+### Angular Branch Module
+
+```typescript
+// Branch routing
+@NgModule({
+  imports: [
+    RouterModule.forChild([
+      {
+        path: 'branches',
+        component: BranchListComponent,
+        canActivate: [AdminGuard]
+      },
+      {
+        path: 'branches/:id',
+        component: BranchDetailComponent,
+        canActivate: [AdminGuard]
+      },
+      {
+        path: 'branches/:id/edit',
+        component: BranchEditComponent,
+        canActivate: [AdminGuard]
+      }
+    ])
+  ]
+})
+export class BranchesRoutingModule { }
+```
+
+### Branch Service
+
+```typescript
+@Injectable()
+export class BranchService {
+  private apiUrl = '/api/branches';
+  
+  constructor(private http: HttpClient) {}
+  
+  getBranches(search?: string): Observable<Branch[]> {
+    let params = new HttpParams();
+    if (search) {
+      params = params.set('search', search);
+    }
+    return this.http.get<Branch[]>(this.apiUrl, { params });
+  }
+  
+  getBranch(id: number): Observable<Branch> {
+    return this.http.get<Branch>(`${this.apiUrl}/${id}`);
+  }
+  
+  createBranch(branch: Branch): Observable<Branch> {
+    return this.http.post<Branch>(this.apiUrl, branch);
+  }
+  
+  updateBranch(id: number, branch: Branch): Observable<Branch> {
+    return this.http.put<Branch>(`${this.apiUrl}/${id}`, branch);
+  }
+  
+  getCurrentUserBranch(): Observable<Branch> {
+    return this.http.get<Branch>('/api/users/current/branch');
+  }
+}
+```
+
+### Branch Selector Component
+
+```typescript
+@Component({
+  selector: 'app-branch-selector',
+  template: `
+    <mat-form-field>
+      <mat-label>Branch</mat-label>
+      <mat-select [(ngModel)]="selectedBranchId" 
+                  (selectionChange)="onBranchChange($event)">
+        <mat-option *ngFor="let branch of branches$ | async" 
+                    [value]="branch.id">
+          {{ branch.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  `
+})
+export class BranchSelectorComponent implements OnInit {
+  @Input() selectedBranchId: number;
+  @Output() branchChange = new EventEmitter<number>();
+  
+  branches$: Observable<Branch[]>;
+  
+  constructor(private branchService: BranchService) {}
+  
+  ngOnInit() {
+    this.branches$ = this.branchService.getBranches();
+  }
+  
+  onBranchChange(event: MatSelectChange) {
+    this.branchChange.emit(event.value);
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Unique Branch Names" icon="fingerprint">
+    Use clear, descriptive names that identify location or purpose
+  </Card>
+  <Card title="Complete Custom Fields" icon="clipboard-check">
+    Fill in all location details for accurate reporting and mapping
+  </Card>
+  <Card title="Branch-Level Security" icon="shield-halved">
+    Restrict user access to their assigned branch unless admin
+  </Card>
+  <Card title="Regular Reconciliation" icon="scale-balanced">
+    Reconcile inter-branch transactions monthly to ensure accuracy
+  </Card>
+</CardGroup>
+
+### Branch Setup Checklist
+
+When setting up a new branch:
+
+1. **Create Branch Record**
+   - Unique name
+   - Complete address information
+   - Contact details
+
+2. **Configure Custom Fields**
+   - Manager information
+   - Operating hours
+   - Geographic coordinates
+
+3. **Set Up Accounts**
+   - Cash account
+   - Loan portfolio account
+   - Savings liability account
+   - Expense accounts
+
+4. **Assign Users**
+   - Branch manager
+   - Loan officers
+   - Tellers
+   - Accountant
+
+5. **Configure Products**
+   - Enable loan products for branch
+   - Set up savings products
+   - Configure fee structures
+
+6. **Test Operations**
+   - Create test client
+   - Process test loan
+   - Verify accounting entries
+
+<Note>
+Always test branch configuration with sample data before going live to ensure all integrations work correctly.
+</Note>
+
+## Common Use Cases
+
+### Scenario 1: Branch Expansion
+
+```java
+// Create new branch in expansion area
+Branch newBranch = new Branch();
+newBranch.setName("East Market Branch");
+
+// Copy configuration from template branch
+Branch templateBranch = branchService.findByName("Main Branch").get();
+copyBranchConfiguration(templateBranch, newBranch);
+
+// Save and configure
+Branch created = branchService.create(newBranch);
+setupBranchAccounts(created);
+assignInitialStaff(created);
+```
+
+### Scenario 2: Branch Consolidation
+
+```java
+// Merge smaller branch into larger one
+@Transactional
+public void consolidateBranches(Long sourceBranchId, Long targetBranchId) {
+    Branch source = branchService.findOne(sourceBranchId).get();
+    Branch target = branchService.findOne(targetBranchId).get();
+    
+    // Move all profiles
+    profileRepository.findByBranch(source)
+        .forEach(profile -> {
+            profile.setBranch(target);
+            profileRepository.save(profile);
+        });
+    
+    // Move all users
+    userRepository.findByBranch(source)
+        .forEach(user -> {
+            user.setBranch(target);
+            userRepository.save(user);
+        });
+    
+    // Transfer account balances
+    transferBranchBalances(source, target);
+    
+    // Archive source branch
+    source.setName(source.getName() + " (Closed)");
+    branchService.update(source);
+}
+```
+
+### Scenario 3: Multi-Region Reporting
+
+```java
+// Generate regional report aggregating multiple branches
+public RegionalReport generateRegionalReport(String region, LocalDate asOf) {
+    List<Branch> regionalBranches = branchRepository
+        .findByCustomFieldValue("region", region);
+    
+    RegionalReport report = new RegionalReport();
+    report.setRegion(region);
+    report.setReportDate(asOf);
+    
+    for (Branch branch : regionalBranches) {
+        BranchSnapshot snapshot = generateBranchSnapshot(branch, asOf);
+        report.addBranchSnapshot(snapshot);
+    }
+    
+    report.calculateTotals();
+    return report;
+}
+```
+
+<Info>
+Branch management is central to OpenCBS operations. Proper branch setup and maintenance ensure accurate reporting and efficient multi-location management.
+</Info>

@@ -1,0 +1,697 @@
+---
+title: 'Loan Events'
+description: 'Track all loan-related events, transactions, and state changes throughout the loan lifecycle'
+---
+
+## Overview
+
+Loan Events provide a complete audit trail of all activities and transactions on a loan, including:
+
+- Disbursements and repayments
+- Interest and penalty accruals
+- Rescheduling and restructuring
+- Write-offs and reversals
+- Other fees and charges
+- Status changes
+
+Events are immutable records that enable comprehensive reporting, reconciliation, and compliance tracking.
+
+## Event Types
+
+OpenCBS tracks numerous event types throughout the loan lifecycle:
+
+### Financial Events
+
+- **DISBURSEMENT**: Loan funds disbursed to borrower
+- **REPAYMENT**: Payment received from borrower
+- **ACCRUAL_OF_INTEREST**: Daily interest accrual
+- **ACCRUAL_OF_PENALTY**: Penalty accrual for overdue amounts
+- **WRITE_OFF_PRINCIPAL**: Principal written off
+- **WRITE_OFF_INTEREST**: Interest written off
+- **WRITE_OFF_PENALTY**: Penalty written off
+- **OTHER_FEE**: Additional fee charged
+
+### Operational Events
+
+- **RESCHEDULE**: Loan schedule modified
+- **TOP_UP**: Additional funds added to loan
+- **ROLLBACK**: Transaction reversed
+- **LOAN_CLOSE**: Loan closed
+
+### Provision Events
+
+- **SPECIFIC_PROVISION**: Specific provision applied
+- **PROVISION_REVERSAL**: Provision reversed
+
+## Endpoints
+
+### Get Loan Events
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/loans/123/events?fromDate=2024-01-01&toDate=2024-03-31" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loans/123/events?fromDate=2024-01-01&toDate=2024-03-31',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const events = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-instance.opencbs.com/api/loans/123/events',
+    params={
+        'fromDate': '2024-01-01',
+        'toDate': '2024-03-31'
+    },
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+events = response.json()
+```
+</CodeGroup>
+
+```
+GET /api/loans/{loanId}/events
+```
+
+Retrieve all events for a specific loan with optional date filtering.
+
+#### Path Parameters
+
+<ParamField path="loanId" type="integer" required>
+  Loan ID
+</ParamField>
+
+#### Query Parameters
+
+<ParamField query="fromDate" type="date">
+  Start date for event filtering (ISO 8601: YYYY-MM-DD). If not provided, returns all events from loan creation.
+</ParamField>
+
+<ParamField query="toDate" type="date">
+  End date for event filtering (ISO 8601: YYYY-MM-DD). If not provided, returns events through current date.
+</ParamField>
+
+<ParamField query="eventType" type="string">
+  Filter by specific event type (e.g., "REPAYMENT", "DISBURSEMENT")
+</ParamField>
+
+#### Response
+
+Returns an array of `LoanEventDto` objects ordered by effective date and event ID.
+
+<Expandable title="Response Schema">
+  <ResponseField name="id" type="integer">
+    Event ID
+  </ResponseField>
+  
+  <ResponseField name="eventType" type="string">
+    Type of event (DISBURSEMENT, REPAYMENT, ACCRUAL_OF_INTEREST, etc.)
+  </ResponseField>
+  
+  <ResponseField name="effectiveAt" type="datetime">
+    When the event takes effect financially
+  </ResponseField>
+  
+  <ResponseField name="createdAt" type="datetime">
+    When the event was created in the system
+  </ResponseField>
+  
+  <ResponseField name="createdBy" type="object">
+    User who created the event
+    
+    <Expandable title="UserInfoDto">
+      <ResponseField name="id" type="integer">
+        User ID
+      </ResponseField>
+      
+      <ResponseField name="username" type="string">
+        Username
+      </ResponseField>
+      
+      <ResponseField name="firstName" type="string">
+        First name
+      </ResponseField>
+      
+      <ResponseField name="lastName" type="string">
+        Last name
+      </ResponseField>
+    </Expandable>
+  </ResponseField>
+  
+  <ResponseField name="amount" type="decimal">
+    Event amount (positive for inflows, negative for outflows)
+  </ResponseField>
+  
+  <ResponseField name="installmentNumber" type="integer">
+    Installment number affected by this event (null for non-installment events)
+  </ResponseField>
+  
+  <ResponseField name="deleted" type="boolean">
+    Whether the event has been deleted/reversed
+  </ResponseField>
+  
+  <ResponseField name="groupKey" type="integer">
+    Groups related events together (e.g., all events from a single repayment transaction)
+  </ResponseField>
+  
+  <ResponseField name="comment" type="string">
+    Optional comment or note about the event
+  </ResponseField>
+  
+  <ResponseField name="otherFee" type="object">
+    Other fee details (only present for OTHER_FEE events)
+    
+    <Expandable title="OtherFeeDto">
+      <ResponseField name="id" type="integer">
+        Fee ID
+      </ResponseField>
+      
+      <ResponseField name="name" type="string">
+        Fee name
+      </ResponseField>
+      
+      <ResponseField name="amount" type="decimal">
+        Fee amount
+      </ResponseField>
+    </Expandable>
+  </ResponseField>
+</Expandable>
+
+<CodeGroup>
+```json 200 Response
+[
+  {
+    "id": 1001,
+    "eventType": "DISBURSEMENT",
+    "effectiveAt": "2024-01-15T09:00:00",
+    "createdAt": "2024-01-15T09:05:23",
+    "createdBy": {
+      "id": 5,
+      "username": "loan_officer",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    },
+    "amount": 10000.00,
+    "installmentNumber": null,
+    "deleted": false,
+    "groupKey": 100,
+    "comment": "Initial disbursement"
+  },
+  {
+    "id": 1002,
+    "eventType": "ACCRUAL_OF_INTEREST",
+    "effectiveAt": "2024-01-16T00:00:00",
+    "createdAt": "2024-01-16T01:00:00",
+    "createdBy": {
+      "id": 1,
+      "username": "system",
+      "firstName": "System",
+      "lastName": "User"
+    },
+    "amount": 3.29,
+    "installmentNumber": 1,
+    "deleted": false,
+    "groupKey": null,
+    "comment": null
+  },
+  {
+    "id": 1050,
+    "eventType": "REPAYMENT",
+    "effectiveAt": "2024-02-15T14:30:00",
+    "createdAt": "2024-02-15T14:32:15",
+    "createdBy": {
+      "id": 5,
+      "username": "loan_officer",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    },
+    "amount": -888.49,
+    "installmentNumber": 1,
+    "deleted": false,
+    "groupKey": 101,
+    "comment": "First installment payment"
+  },
+  {
+    "id": 1051,
+    "eventType": "OTHER_FEE",
+    "effectiveAt": "2024-03-01T10:00:00",
+    "createdAt": "2024-03-01T10:15:00",
+    "createdBy": {
+      "id": 5,
+      "username": "loan_officer",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    },
+    "amount": 25.00,
+    "installmentNumber": null,
+    "deleted": false,
+    "groupKey": null,
+    "comment": "Account maintenance fee",
+    "otherFee": {
+      "id": 3,
+      "name": "Account Maintenance Fee",
+      "amount": 25.00
+    }
+  }
+]
+```
+</CodeGroup>
+
+<Note>
+  Event amounts follow this convention:
+  - **Positive amounts**: Money received or accrued (disbursements, interest accrual, fees charged)
+  - **Negative amounts**: Money paid or written off (repayments, write-offs)
+</Note>
+
+---
+
+### Get Grouped Events
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/loans/123/events/group?fromDate=2024-01-01" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loans/123/events/group?fromDate=2024-01-01',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const groupedEvents = await response.json();
+```
+</CodeGroup>
+
+```
+GET /api/loans/{loanId}/events/group
+```
+
+Retrieve consolidated events where related events are grouped together. For example, a single repayment transaction might generate multiple events (principal repayment, interest repayment, penalty payment), and this endpoint consolidates them.
+
+#### Path Parameters
+
+<ParamField path="loanId" type="integer" required>
+  Loan ID
+</ParamField>
+
+#### Query Parameters
+
+<ParamField query="fromDate" type="date">
+  Start date for filtering
+</ParamField>
+
+<ParamField query="toDate" type="date">
+  End date for filtering
+</ParamField>
+
+<ParamField query="eventType" type="string">
+  Filter by event type
+</ParamField>
+
+#### Response
+
+Returns an array of events with one representative event per group, sorted by effective date and event ID.
+
+<CodeGroup>
+```json 200 Response
+[
+  {
+    "id": 1001,
+    "eventType": "DISBURSEMENT",
+    "effectiveAt": "2024-01-15T09:00:00",
+    "amount": 10000.00,
+    "groupKey": 100,
+    "comment": "Initial disbursement"
+  },
+  {
+    "id": 1050,
+    "eventType": "REPAYMENT",
+    "effectiveAt": "2024-02-15T14:30:00",
+    "amount": -888.49,
+    "groupKey": 101,
+    "comment": "First installment payment"
+  }
+]
+```
+</CodeGroup>
+
+<Tip>
+  Use this endpoint for transaction-level reporting where you want to see one line per transaction rather than one line per accounting entry.
+</Tip>
+
+---
+
+### Get Events by Group Key
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/loans/123/events/101" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loans/123/events/101',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const eventGroup = await response.json();
+```
+</CodeGroup>
+
+```
+GET /api/loans/{loanId}/events/{groupKey}
+```
+
+Retrieve all events that share a specific group key. This shows all the detailed accounting entries for a single transaction.
+
+#### Path Parameters
+
+<ParamField path="loanId" type="integer" required>
+  Loan ID
+</ParamField>
+
+<ParamField path="groupKey" type="integer" required>
+  Group key to retrieve
+</ParamField>
+
+#### Response
+
+Returns an array of all events with the specified group key, sorted by event ID.
+
+<CodeGroup>
+```json 200 Response
+[
+  {
+    "id": 1050,
+    "eventType": "REPAYMENT_OF_PRINCIPAL",
+    "effectiveAt": "2024-02-15T14:30:00",
+    "createdAt": "2024-02-15T14:32:15",
+    "createdBy": {
+      "id": 5,
+      "username": "loan_officer",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    },
+    "amount": -788.49,
+    "installmentNumber": 1,
+    "deleted": false,
+    "groupKey": 101,
+    "comment": "Principal portion"
+  },
+  {
+    "id": 1051,
+    "eventType": "REPAYMENT_OF_INTEREST",
+    "effectiveAt": "2024-02-15T14:30:00",
+    "createdAt": "2024-02-15T14:32:15",
+    "createdBy": {
+      "id": 5,
+      "username": "loan_officer",
+      "firstName": "Jane",
+      "lastName": "Doe"
+    },
+    "amount": -100.00,
+    "installmentNumber": 1,
+    "deleted": false,
+    "groupKey": 101,
+    "comment": "Interest portion"
+  }
+]
+```
+</CodeGroup>
+
+<Info>
+  This endpoint is useful for:
+  - Drilling down into transaction details
+  - Reconciliation and accounting
+  - Audit trail investigation
+  - Receipt generation with full breakdown
+</Info>
+
+---
+
+## Event Grouping
+
+Events are grouped together when they result from a single business transaction. The `groupKey` field links related events.
+
+### Disbursement Group
+
+A loan disbursement typically creates multiple events:
+
+```json
+[
+  {
+    "id": 1001,
+    "eventType": "DISBURSEMENT",
+    "amount": 10000.00,
+    "groupKey": 100
+  },
+  {
+    "id": 1002,
+    "eventType": "ENTRY_FEE",
+    "amount": 250.00,
+    "groupKey": 100
+  },
+  {
+    "id": 1003,
+    "eventType": "DISBURSEMENT_TO_PAYEE",
+    "amount": -9750.00,
+    "groupKey": 100
+  }
+]
+```
+
+### Repayment Group
+
+A repayment transaction creates events for each component:
+
+```json
+[
+  {
+    "id": 1050,
+    "eventType": "REPAYMENT_OF_PENALTY",
+    "amount": -50.00,
+    "groupKey": 101
+  },
+  {
+    "id": 1051,
+    "eventType": "REPAYMENT_OF_INTEREST",
+    "amount": -100.00,
+    "groupKey": 101
+  },
+  {
+    "id": 1052,
+    "eventType": "REPAYMENT_OF_PRINCIPAL",
+    "amount": -788.49,
+    "groupKey": 101
+  }
+]
+```
+
+## Use Cases
+
+### Transaction History
+
+Display a borrower's transaction history:
+
+```javascript
+// Get consolidated events for cleaner display
+const events = await fetch(
+  `/api/loans/${loanId}/events/group?fromDate=${startDate}&toDate=${endDate}`
+).then(r => r.json());
+
+// Display one row per transaction
+events.forEach(event => {
+  console.log(`${event.effectiveAt}: ${event.eventType} - ${event.amount}`);
+});
+```
+
+### Loan Statement Generation
+
+Generate a detailed loan statement:
+
+```javascript
+// Get all events for the statement period
+const events = await fetch(
+  `/api/loans/${loanId}/events?fromDate=${statementStart}&toDate=${statementEnd}`
+).then(r => r.json());
+
+// Group by date and event type
+const statement = events.reduce((acc, event) => {
+  const date = event.effectiveAt.split('T')[0];
+  if (!acc[date]) acc[date] = [];
+  acc[date].push(event);
+  return acc;
+}, {});
+
+// Generate statement rows
+Object.entries(statement).forEach(([date, dayEvents]) => {
+  console.log(`\nDate: ${date}`);
+  dayEvents.forEach(e => {
+    console.log(`  ${e.eventType}: ${e.amount}`);
+  });
+});
+```
+
+### Reconciliation
+
+Reconcile payments against accounting system:
+
+```javascript
+// Get all repayment events for a period
+const repayments = await fetch(
+  `/api/loans/${loanId}/events?eventType=REPAYMENT&fromDate=${monthStart}&toDate=${monthEnd}`
+).then(r => r.json());
+
+// Sum by group key to get transaction totals
+const transactions = repayments.reduce((acc, event) => {
+  if (!acc[event.groupKey]) {
+    acc[event.groupKey] = {
+      date: event.effectiveAt,
+      total: 0,
+      events: []
+    };
+  }
+  acc[event.groupKey].total += Math.abs(event.amount);
+  acc[event.groupKey].events.push(event);
+  return acc;
+}, {});
+
+// Compare with external payment records
+Object.values(transactions).forEach(txn => {
+  console.log(`Transaction on ${txn.date}: $${txn.total}`);
+});
+```
+
+### Audit Trail
+
+Track who made changes and when:
+
+```javascript
+// Get all events with full details
+const events = await fetch(
+  `/api/loans/${loanId}/events`
+).then(r => r.json());
+
+// Filter for manual events (not system-generated)
+const manualEvents = events.filter(
+  e => e.createdBy.username !== 'system'
+);
+
+// Show audit trail
+manualEvents.forEach(event => {
+  console.log(
+    `${event.createdAt}: ${event.createdBy.firstName} ${event.createdBy.lastName} ` +
+    `performed ${event.eventType} for ${event.amount}`
+  );
+});
+```
+
+### Interest Accrual Report
+
+Track interest accrued over time:
+
+```javascript
+// Get all interest accrual events
+const accruals = await fetch(
+  `/api/loans/${loanId}/events?eventType=ACCRUAL_OF_INTEREST&fromDate=${yearStart}`
+).then(r => r.json());
+
+// Calculate total accrued
+const totalAccrued = accruals.reduce(
+  (sum, event) => sum + event.amount,
+  0
+);
+
+console.log(`Total interest accrued: $${totalAccrued.toFixed(2)}`);
+
+// Show daily accrual
+accruals.forEach(event => {
+  console.log(`${event.effectiveAt.split('T')[0]}: $${event.amount}`);
+});
+```
+
+## Best Practices
+
+### Query Optimization
+
+1. **Use Date Filters**: Always filter by date range to limit result set size
+2. **Event Type Filtering**: Filter by event type when you only need specific events
+3. **Grouped vs. Detailed**: Use `/events/group` for summaries, `/events` for details
+4. **Pagination**: For large date ranges, implement pagination on the client side
+
+### Data Interpretation
+
+1. **Amount Signs**: Remember positive = inflow/accrual, negative = outflow/payment
+2. **Deleted Events**: Check the `deleted` flag to filter out reversed transactions
+3. **System Events**: Filter by `createdBy` to distinguish manual vs. automated events
+4. **Effective vs. Created**: Use `effectiveAt` for financial reporting, `createdAt` for audit trails
+
+### Performance
+
+1. **Cache Results**: Event data is immutable once created, safe to cache
+2. **Incremental Updates**: Query only new events since last fetch using `fromDate`
+3. **Local Aggregation**: Download raw events and aggregate locally for complex reports
+4. **Avoid Large Ranges**: Limit queries to necessary date ranges
+
+### Compliance
+
+1. **Complete History**: Events provide the complete audit trail for regulatory compliance
+2. **Immutability**: Events cannot be modified, only marked as deleted through reversals
+3. **User Tracking**: All events track who created them for accountability
+4. **Timestamp Accuracy**: Both creation and effective timestamps are recorded
+
+## Event Types Reference
+
+<Expandable title="Complete Event Type List">
+  
+  ### Disbursement Events
+  - `DISBURSEMENT`: Primary disbursement event
+  - `DISBURSEMENT_TO_PAYEE`: Funds paid to designated payee
+  - `ENTRY_FEE`: Entry fees charged
+  
+  ### Repayment Events
+  - `REPAYMENT`: General repayment event
+  - `REPAYMENT_OF_PRINCIPAL`: Principal component
+  - `REPAYMENT_OF_INTEREST`: Interest component
+  - `REPAYMENT_OF_PENALTY`: Penalty component
+  - `REPAYMENT_OF_EARLY_FEE`: Early repayment fee
+  
+  ### Accrual Events
+  - `ACCRUAL_OF_INTEREST`: Daily interest accrual
+  - `ACCRUAL_OF_PENALTY`: Penalty accrual
+  
+  ### Write-off Events
+  - `WRITE_OFF_PRINCIPAL`: Principal written off
+  - `WRITE_OFF_INTEREST`: Interest written off
+  - `WRITE_OFF_PENALTY`: Penalty written off
+  - `WRITE_OFF_OTHER_FEES`: Other fees written off
+  
+  ### Other Events
+  - `OTHER_FEE`: Additional fee charged
+  - `RESCHEDULE`: Schedule modified
+  - `TOP_UP`: Loan topped up
+  - `ROLLBACK`: Transaction reversed
+  - `LOAN_CLOSE`: Loan closed
+  - `SPECIFIC_PROVISION`: Provision applied
+  - `PROVISION_REVERSAL`: Provision reversed
+  
+</Expandable>

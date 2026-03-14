@@ -1,0 +1,797 @@
+---
+title: 'Custom Fields'
+description: 'Create and manage custom fields to extend data models in OpenCBS Cloud'
+---
+
+## Overview
+
+OpenCBS Cloud provides a powerful custom fields system that allows you to extend core data models without modifying the database schema. Custom fields enable you to capture additional information specific to your institution's requirements across various entities including profiles, loans, savings, and branches.
+
+## Architecture
+
+### Core Components
+
+The custom fields system consists of three main components:
+
+1. **Custom Fields** - Define the field structure and validation rules
+2. **Custom Field Sections** - Group related fields together
+3. **Custom Field Values** - Store actual data for entity instances
+
+### Domain Model Hierarchy
+
+Base custom field implementation (`com.opencbs.core.domain.customfields.CustomField`):
+
+```java
+@MappedSuperclass
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+public abstract class CustomField<Tcfs extends CustomFieldSection> extends BaseEntity {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    Tcfs section;
+    
+    @Column(name = "field_type", nullable = false)
+    @Enumerated(value = EnumType.STRING)
+    private CustomFieldType fieldType;
+    
+    @Column(name = "[name]", nullable = false, unique = true)
+    private String name;
+    
+    @Column(name = "caption", nullable = false)
+    private String caption;
+    
+    @Column(name = "description", nullable = false)
+    private String description;
+    
+    @Column(name = "is_unique", nullable = false)
+    private boolean unique;
+    
+    @Column(name = "is_required", nullable = false)
+    private boolean required;
+    
+    @Column(name = "[order]", nullable = false)
+    private int order;
+    
+    @Column(name = "extra")
+    private CustomFieldExtra extra;
+    
+    @Column(name = "deleted")
+    private Boolean deleted = false;
+}
+```
+
+### Entity-Specific Implementations
+
+Custom fields are available for:
+
+<CardGroup cols={2}>
+  <Card title="Person Custom Fields" icon="user">
+    **Entity:** Individual clients  
+    **Implementation:** `PersonCustomField`  
+    **Controller:** `/api/profiles/people/custom-fields`
+  </Card>
+
+  <Card title="Company Custom Fields" icon="building">
+    **Entity:** Corporate clients  
+    **Implementation:** `CompanyCustomField`  
+    **Controller:** `/api/profiles/companies/custom-fields`
+  </Card>
+
+  <Card title="Group Custom Fields" icon="users">
+    **Entity:** Client groups  
+    **Implementation:** `GroupCustomField`  
+    **Controller:** `/api/profiles/groups/custom-fields`
+  </Card>
+
+  <Card title="Branch Custom Fields" icon="code-branch">
+    **Entity:** Branch locations  
+    **Implementation:** `BranchCustomField`  
+    **Controller:** `/api/branches/custom-fields`
+  </Card>
+</CardGroup>
+
+## Field Types
+
+Custom fields support various data types defined in the `CustomFieldType` enum:
+
+```java
+public enum CustomFieldType {
+    TEXT,        // Single-line text
+    TEXT_AREA,   // Multi-line text
+    NUMERIC,     // Numeric values
+    LIST,        // Dropdown selection
+    DATE,        // Date picker
+    LOOKUP,      // Reference to another entity
+    AGE,         // Auto-calculated age
+    GRID,        // Tabular data
+    PATTERN,     // Pattern-matched text
+    CHECKBOX     // Boolean checkbox
+}
+```
+
+### Field Type Details
+
+<AccordionGroup>
+  <Accordion title="TEXT">
+    Single-line text input for short strings.
+    
+    **Use Cases:**
+    - Client ID numbers
+    - Short descriptions
+    - Reference codes
+    
+    **Validation:**
+    - Maximum length can be specified
+    - Optional pattern matching
+  </Accordion>
+
+  <Accordion title="TEXT_AREA">
+    Multi-line text input for longer content.
+    
+    **Use Cases:**
+    - Comments and notes
+    - Detailed descriptions
+    - Instructions
+    
+    **Validation:**
+    - Maximum length limit
+  </Accordion>
+
+  <Accordion title="NUMERIC">
+    Numeric input with decimal support.
+    
+    **Use Cases:**
+    - Custom amounts
+    - Ratings or scores
+    - Quantities
+    
+    **Validation:**
+    - Min/max values
+    - Decimal precision
+    
+    **Extra Configuration:**
+    ```json
+    {
+      "precision": 2,
+      "minValue": 0,
+      "maxValue": 1000000
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="LIST">
+    Dropdown selection from predefined options.
+    
+    **Use Cases:**
+    - Status selections
+    - Categories
+    - Predefined classifications
+    
+    **Extra Configuration:**
+    ```json
+    {
+      "items": [
+        {"value": "option1", "label": "Option 1"},
+        {"value": "option2", "label": "Option 2"},
+        {"value": "option3", "label": "Option 3"}
+      ]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="DATE">
+    Date picker field.
+    
+    **Use Cases:**
+    - Custom date tracking
+    - Milestone dates
+    - Expiration dates
+    
+    **Validation:**
+    - Min/max date constraints
+    - Date format validation
+  </Accordion>
+
+  <Accordion title="LOOKUP">
+    Reference to another entity in the system.
+    
+    **Use Cases:**
+    - Link to guarantors
+    - Reference to related accounts
+    - Associate with external entities
+    
+    **Extra Configuration:**
+    ```json
+    {
+      "entityType": "PERSON",
+      "lookupUrl": "/api/profiles/people/lookup"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="AGE">
+    Auto-calculated age based on birth date.
+    
+    **Use Cases:**
+    - Current age display
+    - Age-based eligibility
+    
+    **Configuration:**
+    Links to a date field for calculation
+  </Accordion>
+
+  <Accordion title="GRID">
+    Tabular data entry with rows and columns.
+    
+    **Use Cases:**
+    - List of dependents
+    - Asset inventory
+    - Multiple references
+    
+    **Extra Configuration:**
+    ```json
+    {
+      "columns": [
+        {"name": "name", "type": "TEXT", "label": "Name"},
+        {"name": "age", "type": "NUMERIC", "label": "Age"},
+        {"name": "relation", "type": "LIST", "label": "Relation"}
+      ]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="PATTERN">
+    Text field with regex pattern validation.
+    
+    **Use Cases:**
+    - Phone numbers
+    - Email addresses
+    - Custom ID formats
+    
+    **Extra Configuration:**
+    ```json
+    {
+      "pattern": "^[A-Z]{2}\\d{6}$",
+      "errorMessage": "Format must be XX123456"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="CHECKBOX">
+    Boolean checkbox field.
+    
+    **Use Cases:**
+    - Yes/No questions
+    - Feature flags
+    - Consent tracking
+  </Accordion>
+</AccordionGroup>
+
+## Creating Custom Fields
+
+### Step-by-Step Guide
+
+<Steps>
+  <Step title="Define Field Structure">
+    Prepare your custom field definition:
+    
+    ```json
+    {
+      "name": "passport_number",
+      "caption": "Passport Number",
+      "description": "Client's passport identification number",
+      "fieldType": "PATTERN",
+      "sectionId": 1,
+      "order": 5,
+      "required": false,
+      "unique": true,
+      "extra": {
+        "pattern": "^[A-Z]{2}[0-9]{7}$",
+        "errorMessage": "Passport must be 2 letters followed by 7 digits"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Submit Field Creation Request">
+    For person profiles:
+    ```bash
+    POST /api/profiles/people/custom-fields
+    Content-Type: application/json
+    
+    {
+      "name": "passport_number",
+      "caption": "Passport Number",
+      "description": "Client's passport identification number",
+      "fieldType": "PATTERN",
+      "sectionId": 1,
+      "order": 5,
+      "required": false,
+      "unique": true,
+      "extra": {
+        "pattern": "^[A-Z]{2}[0-9]{7}$",
+        "errorMessage": "Passport format invalid"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Validation">
+    The `PersonCustomFieldDtoValidator` validates:
+    - Field name uniqueness
+    - Valid field type
+    - Section exists
+    - Required properties present
+    - Extra data structure for field type
+  </Step>
+
+  <Step title="Field Created">
+    On success, returns updated sections list with the new field included.
+  </Step>
+</Steps>
+
+### Example: Creating Different Field Types
+
+<CodeGroup>
+```json Text Field
+{
+  "name": "middle_name",
+  "caption": "Middle Name",
+  "description": "Client's middle name",
+  "fieldType": "TEXT",
+  "sectionId": 1,
+  "order": 3,
+  "required": false,
+  "unique": false
+}
+```
+
+```json Numeric Field
+{
+  "name": "monthly_income",
+  "caption": "Monthly Income",
+  "description": "Client's monthly income in USD",
+  "fieldType": "NUMERIC",
+  "sectionId": 2,
+  "order": 1,
+  "required": true,
+  "unique": false,
+  "extra": {
+    "precision": 2,
+    "minValue": 0,
+    "maxValue": 1000000
+  }
+}
+```
+
+```json List Field
+{
+  "name": "education_level",
+  "caption": "Education Level",
+  "description": "Highest education level completed",
+  "fieldType": "LIST",
+  "sectionId": 1,
+  "order": 10,
+  "required": true,
+  "unique": false,
+  "extra": {
+    "items": [
+      {"value": "none", "label": "No Formal Education"},
+      {"value": "primary", "label": "Primary School"},
+      {"value": "secondary", "label": "Secondary School"},
+      {"value": "university", "label": "University"},
+      {"value": "postgrad", "label": "Post-Graduate"}
+    ]
+  }
+}
+```
+
+```json Date Field
+{
+  "name": "membership_date",
+  "caption": "Membership Date",
+  "description": "Date client became a member",
+  "fieldType": "DATE",
+  "sectionId": 1,
+  "order": 15,
+  "required": false,
+  "unique": false,
+  "extra": {
+    "minDate": "2000-01-01",
+    "maxDate": "today"
+  }
+}
+```
+</CodeGroup>
+
+## Updating Custom Fields
+
+Modify existing custom fields:
+
+```bash
+PUT /api/profiles/people/custom-fields/{id}
+```
+
+Request body:
+```json
+{
+  "name": "passport_number",
+  "caption": "Passport/ID Number",
+  "description": "Client's passport or national ID number",
+  "fieldType": "PATTERN",
+  "sectionId": 1,
+  "order": 5,
+  "required": true,
+  "unique": true,
+  "extra": {
+    "pattern": "^([A-Z]{2}[0-9]{7}|[0-9]{10})$",
+    "errorMessage": "Invalid passport or ID format"
+  }
+}
+```
+
+<Warning>
+  **Restrictions on Updates:**
+  - Cannot change field type if data already exists
+  - Making field unique when duplicates exist will fail
+  - Making field required when null values exist will fail
+</Warning>
+
+The controller implementation handles section changes:
+
+```java
+if(!customField.getSection().getId().equals(newSection.getId())) {
+    // Moving to different section
+    customField.setOrder(oldOrder);
+    this.personCustomFieldService.updateWithSection(customField, newSection);
+} else {
+    // Staying in same section
+    this.updateInsideSection(customField, oldOrder);
+}
+```
+
+## Deleting Custom Fields
+
+Soft delete custom fields:
+
+```bash
+DELETE /api/profiles/people/custom-fields/{fieldId}
+```
+
+The field is marked as `deleted = true` rather than being physically removed:
+
+```java
+@DeleteMapping(value = "/{fieldId}")
+public void deleteCustomField(@PathVariable @NonNull Long fieldId) {
+    CustomField customField = this.personCustomFieldService.findOne(fieldId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            String.format("Field not found (ID=%d).")))
+    
+    this.personCustomFieldService.delete(customField);
+}
+```
+
+<Note>
+  Deleted fields are filtered from queries using `@Where(clause = "deleted = false")` at the entity level.
+</Note>
+
+## Custom Field Sections
+
+Sections organize related custom fields into logical groups.
+
+### Section Domain Model
+
+```java
+@MappedSuperclass
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+public class CustomFieldSection<Tcf extends CustomField> extends BaseEntity {
+    @Column(name = "caption", nullable = false)
+    private String caption;
+    
+    @Column(name = "[order]", nullable = false)
+    private int order;
+    
+    @OrderBy("order asc")
+    @OneToMany(mappedBy = "section", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @Where(clause = "deleted = false")
+    List<Tcf> customFields;
+    
+    @Column(name = "code", nullable = false)
+    private String code;
+}
+```
+
+### Managing Sections
+
+Create a new section:
+
+```bash
+POST /api/profiles/people/custom-field-sections
+```
+
+```json
+{
+  "caption": "Employment Information",
+  "code": "employment_info",
+  "order": 3
+}
+```
+
+Update section:
+
+```bash
+PUT /api/profiles/people/custom-field-sections/{id}
+```
+
+Get all sections with fields:
+
+```bash
+GET /api/profiles/people/custom-field-sections
+```
+
+Response structure:
+```json
+[
+  {
+    "id": 1,
+    "caption": "Personal Information",
+    "code": "personal_info",
+    "order": 1,
+    "customFields": [
+      {
+        "id": 5,
+        "name": "middle_name",
+        "caption": "Middle Name",
+        "fieldType": "TEXT",
+        "order": 1,
+        "required": false,
+        "unique": false
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "caption": "Financial Information",
+    "code": "financial_info",
+    "order": 2,
+    "customFields": []
+  }
+]
+```
+
+## Custom Field Values
+
+Actual data is stored in entity-specific value tables.
+
+### Value Domain Model
+
+```java
+public abstract class CustomFieldValue extends BaseEntity {
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+    
+    @Column(name = "value")
+    private String value;
+    
+    @Column(name = "field_id", nullable = false)
+    private Long fieldId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private EntityStatus status;
+}
+```
+
+### Setting Field Values
+
+When creating or updating an entity (e.g., Person profile):
+
+```bash
+POST /api/profiles/people
+```
+
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "customFieldValues": [
+    {
+      "fieldId": 5,
+      "value": "James"
+    },
+    {
+      "fieldId": 10,
+      "value": "AB1234567"
+    },
+    {
+      "fieldId": 15,
+      "value": "2024-01-15"
+    }
+  ]
+}
+```
+
+### Validating Field Values
+
+Values are validated against field definitions:
+
+- **Required:** Must have non-null, non-empty value
+- **Unique:** Value must not exist for other entities
+- **Pattern:** Must match regex pattern
+- **Numeric:** Must be valid number within range
+- **Date:** Must be valid date within constraints
+- **List:** Must be one of predefined options
+
+### Checking Uniqueness
+
+Verify if a value already exists:
+
+```bash
+GET /api/profiles/people/custom-fields/{fieldId}/{value}
+```
+
+Returns the owner ID if value exists, or null if unique.
+
+## Entity-Specific Controllers
+
+### Person Custom Fields
+
+**Controller:** `PersonCustomFieldController`  
+**Base Path:** `/api/profiles/people/custom-fields`  
+**Service:** `PersonCustomFieldService`  
+**Mapper:** `PersonCustomFieldMapper`  
+**Validator:** `PersonCustomFieldDtoValidator`
+
+### Company Custom Fields
+
+**Controller:** `CompanyCustomFieldController`  
+**Base Path:** `/api/profiles/companies/custom-fields`  
+**Service:** `CompanyCustomFieldService`
+
+### Group Custom Fields
+
+**Controller:** `GroupCustomFieldController`  
+**Base Path:** `/api/profiles/groups/custom-fields`  
+**Service:** `GroupCustomFieldService`
+
+### Branch Custom Fields
+
+**Controller:** `BranchCustomFieldController`  
+**Base Path:** `/api/branches/custom-fields`  
+**Service:** `BranchCustomFieldService`
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Field Design" icon="pen-ruler">
+    - Use descriptive, clear captions
+    - Choose appropriate field types
+    - Group related fields in sections
+    - Set reasonable validation rules
+  </Card>
+
+  <Card title="Naming Conventions" icon="tag">
+    - Use snake_case for field names
+    - Make names descriptive but concise
+    - Avoid special characters
+    - Plan for internationalization
+  </Card>
+
+  <Card title="Data Integrity" icon="shield-check">
+    - Use unique constraint for ID fields
+    - Make critical fields required
+    - Validate patterns thoroughly
+    - Test with sample data first
+  </Card>
+
+  <Card title="Performance" icon="gauge">
+    - Limit number of custom fields per entity
+    - Use lookup fields sparingly
+    - Index unique fields in database
+    - Consider query performance
+  </Card>
+</CardGroup>
+
+## Advanced Features
+
+### Conditional Fields
+
+Implement conditional field display based on other field values:
+
+```json
+{
+  "name": "employer_name",
+  "caption": "Employer Name",
+  "fieldType": "TEXT",
+  "extra": {
+    "conditionalDisplay": {
+      "dependsOn": "employment_status",
+      "showWhen": ["employed", "self_employed"]
+    }
+  }
+}
+```
+
+### Field Dependencies
+
+Link fields together for calculated values:
+
+```json
+{
+  "name": "current_age",
+  "caption": "Current Age",
+  "fieldType": "AGE",
+  "extra": {
+    "calculateFrom": "birth_date"
+  }
+}
+```
+
+### Multi-Language Support
+
+Support multiple languages for field captions:
+
+```json
+{
+  "name": "marital_status",
+  "caption": "Marital Status",
+  "fieldType": "LIST",
+  "extra": {
+    "items": [
+      {
+        "value": "single",
+        "label": "Single",
+        "translations": {
+          "fr": "Célibataire",
+          "ar": "أعزب",
+          "ru": "Холост"
+        }
+      }
+    ]
+  }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Field Creation Fails">
+    **Common Causes:**
+    - Field name already exists (must be unique)
+    - Invalid section ID
+    - Invalid field type
+    - Malformed extra data
+    
+    **Solution:**
+    Check validator error messages and ensure all required properties are valid.
+  </Accordion>
+
+  <Accordion title="Cannot Update Field Type">
+    **Cause:**
+    Cannot change field type when data exists to prevent data loss.
+    
+    **Solution:**
+    Create a new field with the desired type and migrate data manually.
+  </Accordion>
+
+  <Accordion title="Unique Constraint Violation">
+    **Cause:**
+    Trying to set unique=true when duplicate values exist.
+    
+    **Solution:**
+    Clean duplicate data first, then update field to unique.
+  </Accordion>
+
+  <Accordion title="Field Not Appearing">
+    **Check:**
+    - Field not marked as deleted
+    - Section is active
+    - Field order is set correctly
+    - Cache has been cleared
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+- [Profile Concepts](/concepts/profiles)
+- [User Management](/admin/user-roles-permissions)
+- [Profiles API](/api/profiles)

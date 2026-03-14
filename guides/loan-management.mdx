@@ -1,0 +1,427 @@
+---
+title: Loan Management
+description: Learn how to create loans, process repayments, and manage loan schedules in OpenCBS Cloud
+---
+
+Loan management is the core lending functionality in OpenCBS Cloud. This guide covers the complete loan lifecycle from application to closure.
+
+## Understanding the Loan Workflow
+
+The loan process in OpenCBS Cloud follows these stages:
+
+1. **Loan Application**: Create and submit a loan application
+2. **Approval**: Review and approve through credit committee
+3. **Disbursement**: Release funds to the client
+4. **Active**: Manage ongoing loan and repayments
+5. **Closed**: Loan fully repaid or written off
+
+## Creating a Loan Application
+
+<Steps>
+  <Step title="Start from Client Profile">
+    Navigate to the client's profile (person, company, or group) and click **Create Loan Application** from the profile actions menu.
+    
+    <Note>
+    You can also create loan applications from the main **Loan Applications** menu, but starting from the profile automatically links the application to the client.
+    </Note>
+  </Step>
+
+  <Step title="Select Loan Product">
+    Choose the appropriate loan product from the dropdown. The loan product determines:
+    - Interest rate range
+    - Loan amount limits
+    - Maturity period options
+    - Fee structure
+    - Repayment schedule type
+    
+    Once selected, the form populates with product-specific parameters and constraints.
+  </Step>
+
+  <Step title="Configure Loan Parameters">
+    Set the core loan parameters:
+    
+    **Amount**
+    - Enter the requested loan amount
+    - Must be within the product's min/max range
+    - For groups, allocate amounts to individual members
+    
+    **Interest Rate**
+    - Select rate within allowed range
+    - Displays as annual percentage
+    
+    **Maturity**
+    - Choose maturity period (number of installments)
+    - Or select maturity date if using date-based maturity
+    
+    **Schedule Type**
+    - Determined by loan product (annuity, declining balance, etc.)
+    - Cannot be changed after selection
+    
+    **Disbursement Date**
+    - When funds will be released
+    - Defaults to current date
+    - Cannot be a weekend or holiday
+    
+    **Preferred Repayment Date**
+    - First repayment due date
+    - Must be after disbursement date
+    - Automatically calculated based on schedule type
+  </Step>
+
+  <Step title="Configure Entry Fees">
+    Entry fees are automatically calculated based on the loan product configuration. You can:
+    
+    - View calculated fees by clicking **View Entry Fees**
+    - Modify fee amounts within allowed ranges
+    - Fees are added to the total disbursement amount
+    
+    <Tip>
+    Entry fees can be percentage-based or flat amounts. The system calculates them automatically but allows manual adjustment if configured.
+    </Tip>
+  </Step>
+
+  <Step title="Add Payees (if applicable)">
+    Some loan products support multiple payees for disbursement:
+    
+    1. Click **Add Payee**
+    2. Enter payee name and amount
+    3. Add multiple payees as needed
+    4. Total payee amounts must equal loan amount
+  </Step>
+
+  <Step title="Add Collateral">
+    Navigate to the **Collateral** tab to add loan security:
+    
+    1. Click **Add Collateral**
+    2. Select collateral type
+    3. Enter valuation and description
+    4. Attach supporting documents
+    5. Save collateral record
+    
+    You can add multiple collateral items to a single loan application.
+  </Step>
+
+  <Step title="Add Guarantors">
+    Navigate to the **Guarantors** tab to add loan guarantors:
+    
+    1. Click **Add Guarantor**
+    2. Search and select an existing profile or create new
+    3. Enter guaranteed amount
+    4. Add guarantor details and documentation
+    5. Save guarantor record
+  </Step>
+
+  <Step title="Review and Submit">
+    Review all loan application details:
+    - Verify loan parameters
+    - Check calculated schedule preview
+    - Confirm entry fees
+    - Review collateral and guarantors
+    
+    Click **Submit** to create the loan application.
+  </Step>
+</Steps>
+
+## Approving Loan Applications
+
+After submission, loan applications go through the approval process:
+
+### Credit Committee Review
+
+1. Navigate to **Loan Applications** and open the pending application
+2. Review all application details in the **Info** tab
+3. Check collateral, guarantors, and client history
+4. Add committee notes in the **Comments** section
+5. Navigate to **Credit Committee** tab
+6. Select committee members and decision
+7. Click **Approve** or **Reject**
+
+<Warning>
+Loan approval workflows vary by institution. Some organizations use multi-level approvals or maker-checker processes. Check your institution's approval requirements.
+</Warning>
+
+## Disbursing Loans
+
+Once approved, loans can be disbursed:
+
+<Steps>
+  <Step title="Open Approved Application">
+    Navigate to the approved loan application and click **Disburse**.
+  </Step>
+
+  <Step title="Verify Disbursement Details">
+    Confirm:
+    - Disbursement amount
+    - Disbursement date
+    - Payment method
+    - Payee information (if applicable)
+  </Step>
+
+  <Step title="Process Disbursement">
+    Select the disbursement method:
+    - Cash
+    - Bank transfer
+    - Account credit
+    
+    Click **Confirm Disbursement** to release funds.
+  </Step>
+</Steps>
+
+After disbursement, the loan becomes **Active** and appears in the loans list.
+
+## Processing Repayments
+
+Repayments are processed from the active loan screen:
+
+<Steps>
+  <Step title="Navigate to Loan">
+    Open the active loan from **Loans** menu or client profile.
+  </Step>
+
+  <Step title="Access Repayment Screen">
+    Click **Operations** → **Repayment** from the loan navigation.
+  </Step>
+
+  <Step title="Select Repayment Type">
+    Choose the appropriate repayment type:
+    
+    <Tabs>
+      <Tab title="Normal Repayment">
+        **Normal Repayment** - Standard scheduled repayment
+        
+        - System calculates amounts due automatically
+        - Shows breakdown: Principal, Interest, Penalty
+        - Preview schedule before processing
+        - Can adjust penalty amounts if needed
+      </Tab>
+      
+      <Tab title="Manual Repayment">
+        **Manual Repayment** - Custom payment allocation
+        
+        - Manually enter principal amount
+        - Manually enter interest amount
+        - Manually enter penalty amount
+        - Total is calculated automatically
+        - Use for partial or irregular payments
+      </Tab>
+      
+      <Tab title="Early Repayment">
+        **Early Total Repayment** - Pay off entire loan early
+        
+        - Calculates total outstanding balance
+        - Includes early repayment fees if configured
+        - Shows full loan closure amounts
+        - Updates schedule to mark loan as closed
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Set Repayment Date">
+    Enter the repayment date (defaults to current date). The date affects:
+    - Interest accrual calculations
+    - Penalty calculations
+    - Schedule updates
+    
+    <Note>
+    If the loan requires actualization (interest recalculation), the system will prompt you to actualize before processing the repayment.
+    </Note>
+  </Step>
+
+  <Step title="Preview Schedule">
+    Click **Preview** to see how the repayment affects the loan schedule:
+    
+    - Updated outstanding balances
+    - Remaining installments
+    - Next due date
+    - Paid vs. outstanding amounts
+    
+    Review carefully before confirming.
+  </Step>
+
+  <Step title="Select Payment Method">
+    Choose how the payment was received:
+    - Cash
+    - Bank transfer
+    - Mobile money
+    - Check
+    
+    Add any payment reference numbers or notes.
+  </Step>
+
+  <Step title="Process Repayment">
+    Click **Repay** to process the transaction. The system:
+    - Records the payment
+    - Updates the loan schedule
+    - Updates account balances
+    - Creates accounting entries
+    - Generates receipt (if configured)
+  </Step>
+</Steps>
+
+<Tip>
+**Repayment Best Practices:**
+- Always preview before processing
+- Verify payment amounts with the client
+- Print receipts for client records
+- Add notes for any special circumstances
+- Check schedule after processing to confirm accuracy
+</Tip>
+
+## Managing Loan Schedules
+
+View and manage loan repayment schedules:
+
+### Viewing the Schedule
+
+Navigate to **Schedule** tab to see:
+- Installment number and due dates
+- Principal and interest breakdown
+- Paid vs. outstanding amounts
+- Penalties and fees
+- Running balance
+
+The schedule uses color coding:
+- **Green**: Paid installments
+- **Yellow**: Upcoming installments
+- **Red**: Overdue installments
+
+### Rescheduling Loans
+
+For restructured or rescheduled loans:
+
+1. Navigate to **Operations** → **Reschedule**
+2. Select reschedule reason
+3. Modify terms:
+   - New maturity date
+   - Interest rate adjustment
+   - Grace period extension
+4. Preview new schedule
+5. Submit reschedule request
+
+<Warning>
+Rescheduling may require approval depending on your institution's policies. Check with your supervisor before rescheduling loans.
+</Warning>
+
+## Special Loan Operations
+
+### Write-off
+
+For uncollectible loans:
+
+1. Navigate to **Operations** → **Write-off**
+2. Enter write-off amount
+3. Select write-off reason
+4. Add supporting documentation
+5. Submit for approval
+
+### Loan Provisioning
+
+1. Navigate to loan details
+2. System automatically calculates provision based on:
+   - Days past due
+   - Outstanding balance
+   - Provisioning rules
+3. View provision amount in loan summary
+
+### Top-up Loans
+
+Create additional loans based on good repayment history:
+
+1. From existing loan, click **Top-up**
+2. System calculates eligible amount
+3. Create new application with pre-filled data
+4. Process like standard application
+
+## Group Loan Management
+
+Group loans have special handling:
+
+### Group Disbursement
+
+- Funds can be disbursed to group account
+- Or allocated to individual members
+- Track individual member balances
+
+### Group Repayments
+
+1. Navigate to **Group Repayment**
+2. View all group members
+3. Allocate repayment to members
+4. Process collective payment
+
+<Note>
+Group repayments can be made collectively (one payment for the group) or individually (each member pays their portion).
+</Note>
+
+## Loan Events and Audit Trail
+
+All loan activities are tracked in the **Events** tab:
+
+- Disbursements
+- Repayments
+- Rescheduling
+- Status changes
+- Approvals
+- Comments
+
+Each event shows:
+- Date and time
+- User who performed the action
+- Action type and details
+- Before/after values for changes
+
+## Printing and Documentation
+
+Generate loan documents:
+
+### Available Reports
+
+- **Loan Agreement**: Contract document
+- **Repayment Schedule**: Print schedule for client
+- **Repayment Receipt**: Individual payment receipts
+- **Loan Statement**: Complete transaction history
+
+### Printing Documents
+
+1. Navigate to **Print Out** tab
+2. Select document template
+3. Choose format (PDF, DOCX)
+4. Click **Generate**
+5. Download or print document
+
+## Loan Performance Indicators
+
+Monitor loan health with key indicators:
+
+- **Days Past Due (DPD)**: Number of days payment is overdue
+- **Portfolio at Risk (PAR)**: Percentage of portfolio with overdue payments
+- **Outstanding Balance**: Current principal owed
+- **Accrued Interest**: Interest accumulated but not yet paid
+- **Penalties**: Late payment fees assessed
+
+Access these from the loan dashboard and individual loan views.
+
+## Troubleshooting Common Issues
+
+<Warning>
+**Common Repayment Errors:**
+
+**"You have to actualize contract"**
+- Solution: Click actualize to recalculate interest before processing repayment
+- Occurs when significant time has passed since last transaction
+
+**"Amount exceeds maximum"**
+- Solution: Check the maximum repayment amount and adjust
+- May occur with early repayment or overpayment scenarios
+
+**"Invalid repayment date"**
+- Solution: Ensure date is not before last repayment or in the future
+- Check for weekend/holiday restrictions
+</Warning>
+
+## Related Features
+
+- [Client Management](/guides/client-management) - Managing loan clients
+- [Savings Management](/guides/savings-management) - Related savings accounts
+- [Accounting](/guides/accounting) - Loan accounting entries
+- [Reports](/guides/reports) - Loan performance reports

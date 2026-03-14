@@ -1,0 +1,281 @@
+---
+title: System Requirements
+description: Hardware and software requirements for deploying OpenCBS Cloud
+---
+
+Before deploying OpenCBS Cloud, ensure your system meets the following requirements. OpenCBS Cloud is a modular core banking system built with Java and Angular, requiring specific versions of dependencies for optimal performance.
+
+## Hardware Requirements
+
+### Minimum Specifications
+
+- **CPU**: 2 cores (4 cores recommended)
+- **RAM**: 4 GB minimum (8 GB recommended for production)
+- **Storage**: 20 GB free disk space
+- **Network**: Stable internet connection for cloud deployments
+
+### Recommended Production Specifications
+
+- **CPU**: 4+ cores
+- **RAM**: 16 GB or more
+- **Storage**: 50 GB+ SSD storage
+- **Network**: High-bandwidth connection with low latency
+
+<Note>
+For high-availability deployments, consider using load balancers and multiple instances with at least 8 GB RAM per instance.
+</Note>
+
+## Software Requirements
+
+### Java Development Kit (JDK)
+
+OpenCBS Cloud requires Java 8 for both compilation and runtime.
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install openjdk-8-jdk
+java -version
+```
+
+```bash RHEL/CentOS
+sudo yum install java-1.8.0-openjdk-devel
+java -version
+```
+
+```bash macOS
+brew install openjdk@8
+java -version
+```
+</CodeGroup>
+
+<Warning>
+OpenCBS Cloud is built with Java 8 (1.8). Using a different Java version may cause compatibility issues.
+</Warning>
+
+### Maven
+
+Apache Maven is required for building the server modules. The project uses Maven 3.x.
+
+```bash
+# Verify Maven installation
+mvn --version
+
+# Install Maven on Ubuntu/Debian
+sudo apt install maven
+
+# Install Maven on macOS
+brew install maven
+```
+
+**Required Maven version**: 3.3+
+
+### Node.js and Package Managers
+
+The Angular client requires Node.js and either npm or Yarn.
+
+<Steps>
+  <Step title="Install Node.js">
+    The client uses Angular 8, which requires Node.js 10.x or 12.x.
+
+    ```bash
+    # Using nvm (recommended)
+    nvm install 12
+    nvm use 12
+    
+    # Verify installation
+    node --version
+    npm --version
+    ```
+  </Step>
+
+  <Step title="Install Yarn (Optional but Recommended)">
+    The project build process uses Yarn for dependency management.
+
+    ```bash
+    # Install Yarn globally
+    npm install -g yarn
+    
+    # Verify installation
+    yarn --version
+    ```
+  </Step>
+</Steps>
+
+**Node.js version**: 10.x or 12.x  
+**npm version**: 6.x+  
+**Yarn version**: 1.x (optional)
+
+### PostgreSQL Database
+
+OpenCBS Cloud uses PostgreSQL as its primary database.
+
+<CodeGroup>
+```bash Ubuntu/Debian
+# Install PostgreSQL 12 or higher
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# Start PostgreSQL service
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+# Verify installation
+psql --version
+```
+
+```bash RHEL/CentOS
+# Install PostgreSQL repository
+sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+
+# Install PostgreSQL 12
+sudo yum install -y postgresql12-server postgresql12
+
+# Initialize and start
+sudo /usr/pgsql-12/bin/postgresql-12-setup initdb
+sudo systemctl start postgresql-12
+sudo systemctl enable postgresql-12
+```
+
+```bash macOS
+# Install via Homebrew
+brew install postgresql@12
+brew services start postgresql@12
+```
+</CodeGroup>
+
+**PostgreSQL version**: 9.4+ (12+ recommended)  
+**JDBC Driver**: 9.4.1212 (included in dependencies)
+
+<Note>
+The project uses PostgreSQL-specific features including custom functions and schemas. Other databases are not supported.
+</Note>
+
+### Build Tools
+
+#### Angular CLI
+
+Required for building and serving the Angular client.
+
+```bash
+npm install -g @angular/cli@8.3.20
+
+# Verify installation
+ng --version
+```
+
+**Angular CLI version**: 8.3.20
+
+## Runtime Dependencies
+
+### Spring Boot
+
+OpenCBS Cloud is built on Spring Boot 1.5.4.RELEASE with the following key dependencies:
+
+- **Spring Framework**: 5.1.7.RELEASE
+- **Spring Security**: JWT-based authentication
+- **Spring Data JPA**: Database access layer
+- **Hibernate**: 5.4.1+ for ORM
+
+### Database Migration Tool
+
+The application uses Flyway for database migrations.
+
+- **Flyway version**: 4.0.3
+
+### Additional Libraries
+
+The following libraries are included as Maven dependencies:
+
+- **JasperReports**: 6.10.0 (for PDF reports)
+- **QueryDSL**: 4.2.1 (for type-safe queries)
+- **Lombok**: For reducing boilerplate code
+- **MapStruct**: 1.4.2.Final (for object mapping)
+
+## Optional Components
+
+### Docker
+
+For containerized deployments, install Docker and Docker Compose.
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Verify installation
+docker --version
+docker-compose --version
+```
+
+### Message Broker (RabbitMQ)
+
+For asynchronous processing and messaging features.
+
+```bash
+# Install RabbitMQ
+sudo apt install rabbitmq-server
+
+# Start service
+sudo systemctl start rabbitmq-server
+sudo systemctl enable rabbitmq-server
+```
+
+### SMTP Server
+
+For email notifications, configure an SMTP server or use a service like:
+
+- SendGrid
+- Amazon SES
+- Gmail SMTP
+- Local Postfix/Sendmail
+
+## Memory Configuration
+
+### Maven Build Memory
+
+The Angular client build requires increased Node.js memory allocation:
+
+```json
+"build": "node --max_old_space_size=8192 node_modules/@angular/cli/bin/ng build"
+"build-prod": "node --max_old_space_size=16314 node_modules/@angular/cli/bin/ng build --prod"
+```
+
+<Warning>
+Production builds require up to 16 GB of heap space. Ensure your build environment has sufficient memory.
+</Warning>
+
+### Java Runtime Memory
+
+For production deployments, configure JVM memory settings:
+
+```bash
+java -Xms2g -Xmx4g -jar opencbs-server.jar
+```
+
+## Verification Checklist
+
+Before proceeding with deployment, verify all requirements:
+
+- [ ] Java 8 JDK installed and in PATH
+- [ ] Maven 3.3+ installed
+- [ ] Node.js 10.x or 12.x installed
+- [ ] PostgreSQL 9.4+ installed and running
+- [ ] Yarn installed (or npm available)
+- [ ] Angular CLI 8.3.20 installed
+- [ ] Sufficient disk space (20 GB minimum)
+- [ ] Sufficient RAM (4 GB minimum, 8 GB recommended)
+- [ ] Database user credentials configured
+- [ ] Network ports available (8080 for backend, 4200 for frontend in development)
+
+## Next Steps
+
+Once all requirements are met, proceed to:
+
+- [Building from Source](/deployment/build)
+- [Database Setup](/deployment/database-setup)
+- [Cloud Deployment](/deployment/cloud-deployment)

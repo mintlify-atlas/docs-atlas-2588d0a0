@@ -1,0 +1,487 @@
+---
+title: Holidays
+description: Manage holidays and non-working days in OpenCBS Cloud
+---
+
+The Holidays API provides endpoints for creating, updating, and retrieving holiday information. Holidays are used by the system to calculate loan schedules, payment due dates, and other date-sensitive operations.
+
+## Get All Holidays
+
+<CodeGroup>
+```http Request
+GET /api/holidays
+```
+</CodeGroup>
+
+Retrieves a list of all configured holidays in the system.
+
+### Response
+
+Returns an array of holiday objects.
+
+<ResponseField name="array" type="array">
+  Array of holiday objects
+  <Expandable title="Holiday Object">
+    <ResponseField name="id" type="long">
+      Unique identifier for the holiday
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the holiday (e.g., "New Year's Day", "Christmas")
+    </ResponseField>
+    <ResponseField name="date" type="string">
+      Date of the holiday in ISO 8601 format (YYYY-MM-DD)
+    </ResponseField>
+    <ResponseField name="isAnnual" type="boolean">
+      Whether this holiday recurs annually on the same date. If true, the system will automatically apply this holiday every year.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+[
+  {
+    "id": 1,
+    "name": "New Year's Day",
+    "date": "2026-01-01",
+    "isAnnual": true
+  },
+  {
+    "id": 2,
+    "name": "Independence Day",
+    "date": "2026-07-04",
+    "isAnnual": true
+  },
+  {
+    "id": 3,
+    "name": "Christmas Day",
+    "date": "2026-12-25",
+    "isAnnual": true
+  },
+  {
+    "id": 4,
+    "name": "Special Bank Holiday",
+    "date": "2026-06-15",
+    "isAnnual": false
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get Holiday by ID
+
+<CodeGroup>
+```http Request
+GET /api/holidays/{id}
+```
+</CodeGroup>
+
+Retrieves detailed information about a specific holiday.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the holiday
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="long">
+  Unique identifier for the holiday
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the holiday
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date of the holiday in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="isAnnual" type="boolean">
+  Whether this holiday recurs annually
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 1,
+  "name": "New Year's Day",
+  "date": "2026-01-01",
+  "isAnnual": true
+}
+```
+
+```json Error Response (404)
+{
+  "message": "Holiday not found (ID=999).",
+  "status": 404
+}
+```
+</CodeGroup>
+
+---
+
+## Create Holiday
+
+<CodeGroup>
+```http Request
+POST /api/holidays
+```
+</CodeGroup>
+
+Creates a new holiday in the system.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Name of the holiday
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  Date of the holiday in ISO 8601 format (YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="isAnnual" type="boolean" required>
+  Whether this holiday should recur annually on the same date
+</ParamField>
+
+<CodeGroup>
+```json Request Example (Annual Holiday)
+{
+  "name": "Labor Day",
+  "date": "2026-05-01",
+  "isAnnual": true
+}
+```
+
+```json Request Example (One-time Holiday)
+{
+  "name": "Presidential Election Day",
+  "date": "2026-11-03",
+  "isAnnual": false
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns the created holiday object with generated ID.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the newly created holiday
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Name of the holiday
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date of the holiday
+</ResponseField>
+
+<ResponseField name="isAnnual" type="boolean">
+  Whether this holiday recurs annually
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 5,
+  "name": "Labor Day",
+  "date": "2026-05-01",
+  "isAnnual": true
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "date",
+      "message": "Date is required"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Update Holiday
+
+<CodeGroup>
+```http Request
+PUT /api/holidays/{id}
+```
+</CodeGroup>
+
+Updates an existing holiday.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the holiday to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Updated name of the holiday
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  Updated date of the holiday in ISO 8601 format
+</ParamField>
+
+<ParamField body="isAnnual" type="boolean" required>
+  Updated annual recurrence flag
+</ParamField>
+
+<CodeGroup>
+```json Request Example
+{
+  "name": "Labour Day",
+  "date": "2026-05-01",
+  "isAnnual": true
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns the updated holiday object.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the holiday
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Updated name of the holiday
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Updated date of the holiday
+</ResponseField>
+
+<ResponseField name="isAnnual" type="boolean">
+  Updated annual recurrence flag
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 5,
+  "name": "Labour Day",
+  "date": "2026-05-01",
+  "isAnnual": true
+}
+```
+
+```json Error Response (404)
+{
+  "message": "Holiday not found (ID=999).",
+  "status": 404
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "name",
+      "message": "Holiday name is required"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Usage Examples
+
+### Create an annual holiday
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/holidays" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "National Day",
+    "date": "2026-08-15",
+    "isAnnual": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/holidays', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'National Day',
+    date: '2026-08-15',
+    isAnnual: true
+  })
+});
+
+const holiday = await response.json();
+console.log('Created holiday:', holiday);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/holidays',
+    headers={
+        'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'name': 'National Day',
+        'date': '2026-08-15',
+        'isAnnual': True
+    }
+)
+
+holiday = response.json()
+print('Created holiday:', holiday)
+```
+</CodeGroup>
+
+### Get all annual holidays
+
+<CodeGroup>
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/holidays', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+  }
+});
+
+const holidays = await response.json();
+const annualHolidays = holidays.filter(h => h.isAnnual);
+
+console.log('Annual holidays:', annualHolidays);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.opencbs.com/api/holidays',
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+
+holidays = response.json()
+annual_holidays = [h for h in holidays if h['isAnnual']]
+
+print('Annual holidays:', annual_holidays)
+```
+</CodeGroup>
+
+### Update a holiday
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://api.opencbs.com/api/holidays/5" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "International Workers Day",
+    "date": "2026-05-01",
+    "isAnnual": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/holidays/5', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'International Workers Day',
+    date: '2026-05-01',
+    isAnnual: true
+  })
+});
+
+const updatedHoliday = await response.json();
+console.log('Updated holiday:', updatedHoliday);
+```
+</CodeGroup>
+
+---
+
+## How Holidays Affect the System
+
+### Loan Schedules
+
+When calculating loan repayment schedules, the system automatically skips holidays when determining due dates:
+
+- If a payment is due on a holiday, it's automatically moved to the next business day
+- Annual holidays are considered for all future years in long-term loans
+- This ensures borrowers are never expected to make payments on non-working days
+
+### Interest Calculations
+
+Depending on your system configuration, holidays may affect:
+
+- Daily interest accrual calculations
+- Late fee calculations
+- Grace period computations
+
+### Business Day Calculations
+
+Holidays are excluded when the system calculates:
+
+- Processing timeframes (e.g., "5 business days")
+- Maturity dates
+- Disbursement schedules
+
+---
+
+## Best Practices
+
+### Annual vs. One-time Holidays
+
+<ParamField body="isAnnual" type="boolean">
+  - Set to `true` for holidays that occur on the same date every year (e.g., New Year's Day, Christmas)
+  - Set to `false` for one-time events (e.g., special bank closures, elections)
+</ParamField>
+
+### Planning Ahead
+
+- Configure holidays at the beginning of each year
+- For annual holidays, you only need to create them once
+- Review and update one-time holidays annually
+
+### Date Format
+
+Always use ISO 8601 date format (YYYY-MM-DD):
+- Correct: `"2026-12-25"`
+- Incorrect: `"12/25/2026"` or `"25-12-2026"`
+
+---
+
+## Validation Rules
+
+### Create and Update
+
+- `name` is required and cannot be empty
+- `date` is required and must be a valid ISO 8601 date
+- `isAnnual` is required and must be a boolean value
+- Duplicate holidays (same date) may be allowed depending on system configuration

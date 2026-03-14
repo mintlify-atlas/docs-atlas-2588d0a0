@@ -1,0 +1,503 @@
+---
+title: Savings Management
+description: Learn how to manage savings accounts and process transactions in OpenCBS Cloud
+---
+
+Savings management in OpenCBS Cloud provides comprehensive tools for managing client deposit accounts, processing transactions, and tracking balances.
+
+## Understanding Savings Accounts
+
+Savings accounts in OpenCBS Cloud are configured through savings products that define:
+
+- Interest rates and calculation methods
+- Fee structures (deposit, withdrawal, management, entry, close)
+- Minimum balance requirements
+- Account restrictions and rules
+- Transaction types allowed
+
+## Creating a Savings Account
+
+<Steps>
+  <Step title="Navigate from Client Profile">
+    Open the client profile (person or company) and click **Create Savings Account** from the profile actions menu.
+    
+    <Note>
+    Savings accounts must be linked to a client profile. You cannot create standalone savings accounts.
+    </Note>
+  </Step>
+
+  <Step title="Select Savings Product">
+    Choose the appropriate savings product from the dropdown. The product determines:
+    
+    - Interest rate range
+    - Fee structure and limits
+    - Account features and restrictions
+    
+    The form automatically loads product-specific parameters.
+  </Step>
+
+  <Step title="Configure Account Parameters">
+    Set the savings account parameters:
+    
+    **Interest Rate**
+    - Select rate within the product's allowed range
+    - Rate is typically annual percentage
+    - May be fixed based on product configuration
+    
+    **Open Date**
+    - Date the account becomes active
+    - Defaults to current date
+    - Affects interest calculation start
+    
+    **Savings Officer**
+    - Assign responsible staff member
+    - Defaults to current user
+    - Can be changed later
+    
+    **Fee Configuration**
+    - Deposit fees (rate and flat)
+    - Withdrawal fees (rate and flat)
+    - Entry fees (one-time opening fees)
+    - Close fees (account closure fees)
+    - Management fees (periodic fees)
+    
+    <Tip>
+    Fees are pre-configured by the savings product but can be adjusted within allowed min/max ranges. Fields may be disabled if the product uses fixed fee amounts.
+    </Tip>
+  </Step>
+
+  <Step title="Review and Submit">
+    Review all account parameters and click **Submit** to create the savings account. The account is immediately available for transactions.
+  </Step>
+</Steps>
+
+## Viewing Savings Account Information
+
+Access comprehensive account information from the savings account screen:
+
+<Tabs>
+  <Tab title="Account Summary">
+    The **Info** tab displays:
+    
+    - Account number and status
+    - Current balance
+    - Available balance
+    - Interest accrued but not posted
+    - Account opening date
+    - Assigned savings officer
+    - Interest rate
+    - Fee structure
+    
+    Key balance indicators:
+    - **Current Balance**: Total funds in account
+    - **Available Balance**: Funds available for withdrawal (may differ due to holds)
+    - **Minimum Balance**: Required minimum (from product)
+  </Tab>
+
+  <Tab title="Transaction History">
+    Navigate to the **Entries** tab to view:
+    
+    - All deposits and withdrawals
+    - Interest postings
+    - Fee deductions
+    - Balance after each transaction
+    - Transaction dates and times
+    - Performing user
+    - Transaction descriptions
+    
+    Use pagination to browse historical transactions.
+  </Tab>
+
+  <Tab title="Interest Details">
+    View interest calculation details:
+    
+    - Interest rate applied
+    - Accrued interest (not yet posted)
+    - Interest posting schedule
+    - Posted interest transactions
+    - Interest calculation method
+  </Tab>
+</Tabs>
+
+## Processing Deposits
+
+Deposit funds into a savings account:
+
+<Steps>
+  <Step title="Access Deposit Function">
+    From the main menu, navigate to **Teller Management** → **Teller Operations**, or access deposits directly from the savings account.
+  </Step>
+
+  <Step title="Enter Deposit Details">
+    Complete the deposit form:
+    
+    **Account Selection**
+    - Search for and select the savings account
+    - Verify client information
+    
+    **Amount**
+    - Enter deposit amount
+    - System shows deposit fee (if applicable)
+    - Total credit = Amount - Deposit fee
+    
+    **Date**
+    - Transaction date (defaults to current date)
+    - Affects interest calculation
+    
+    **Payment Method**
+    - Cash
+    - Bank transfer
+    - Check
+    - Mobile money
+    
+    **Description/Notes**
+    - Add transaction description
+    - Reference numbers
+    - Any special notes
+  </Step>
+
+  <Step title="Review and Process">
+    The system displays:
+    - Deposit amount
+    - Applicable fees
+    - Net credit to account
+    - New balance (projected)
+    
+    Click **Process Deposit** to complete the transaction.
+  </Step>
+
+  <Step title="Print Receipt">
+    After processing:
+    - Transaction confirmation appears
+    - Print receipt for client
+    - Receipt shows transaction details and new balance
+  </Step>
+</Steps>
+
+<Tip>
+**Deposit Best Practices:**
+- Always verify the account number before processing
+- Count cash deposits twice
+- Print receipts for client records
+- Enter reference numbers for non-cash deposits
+- Add notes for unusual transactions
+</Tip>
+
+## Processing Withdrawals
+
+Withdraw funds from a savings account:
+
+<Steps>
+  <Step title="Access Withdrawal Function">
+    Navigate to **Teller Operations** or access from the savings account directly.
+  </Step>
+
+  <Step title="Enter Withdrawal Details">
+    Complete the withdrawal form:
+    
+    **Account Selection**
+    - Search and select savings account
+    - System displays current balance
+    
+    **Amount**
+    - Enter withdrawal amount
+    - Must not exceed available balance
+    - System shows withdrawal fee (if applicable)
+    - Total debit = Amount + Withdrawal fee
+    
+    **Verification**
+    - Verify client identity
+    - Check signature card (if applicable)
+    - Confirm withdrawal authorization
+    
+    **Payment Method**
+    - Cash payout
+    - Bank transfer
+    - Check
+    
+    <Warning>
+    The system prevents withdrawals that would bring the balance below the minimum required balance defined in the savings product.
+    </Warning>
+  </Step>
+
+  <Step title="Process Withdrawal">
+    Review withdrawal summary:
+    - Withdrawal amount
+    - Applicable fees
+    - New balance after withdrawal
+    
+    Click **Process Withdrawal** to complete.
+  </Step>
+
+  <Step title="Complete Transaction">
+    - System confirms transaction
+    - Print receipt for client
+    - Disburse cash or initiate transfer
+  </Step>
+</Steps>
+
+## Interest Calculation and Posting
+
+OpenCBS Cloud automatically calculates and posts interest based on the savings product configuration:
+
+### Interest Accrual
+
+Interest accrues:
+- **Daily**: Based on daily balance and annual rate
+- **Automatically**: No manual intervention required
+- **Visible**: Shows in account summary as "Accrued Interest"
+
+### Interest Posting
+
+Interest is posted to the account:
+- **Periodically**: According to product schedule (monthly, quarterly, annually)
+- **Automatically**: Through scheduled jobs
+- **Transaction Created**: Posted interest appears in transaction history
+
+### Viewing Interest
+
+To view interest details:
+1. Open savings account
+2. Navigate to **Entries** tab
+3. Filter for "Interest" transaction types
+4. See posting dates and amounts
+
+<Note>
+Interest calculation methods (simple, compound) and posting frequencies are configured in the savings product and cannot be changed at the account level.
+</Note>
+
+## Account Fees
+
+Savings accounts may have various fees:
+
+### Fee Types
+
+**Entry Fee**
+- One-time fee charged when account is opened
+- Can be percentage or flat amount
+- Deducted from initial deposit or charged separately
+
+**Deposit Fee**
+- Charged on each deposit transaction
+- Can be percentage of deposit or flat amount
+- Deducted from deposit amount
+
+**Withdrawal Fee**
+- Charged on each withdrawal transaction
+- Can be percentage of withdrawal or flat amount
+- Added to withdrawal amount
+
+**Management Fee**
+- Periodic fee (monthly, annually)
+- Charged for account maintenance
+- Automatically deducted from balance
+
+**Close Fee**
+- One-time fee when account is closed
+- Deducted from final balance
+
+### Fee Visibility
+
+All fees are:
+- Shown before transaction processing
+- Recorded in transaction history
+- Included in account statements
+- Reported in fee reports
+
+## Closing Savings Accounts
+
+To close a savings account:
+
+<Steps>
+  <Step title="Access Close Function">
+    Open the savings account and navigate to **Operations** → **Close Account**.
+  </Step>
+
+  <Step title="Verify Closure Eligibility">
+    System checks:
+    - Account balance
+    - Pending transactions
+    - Linked products or services
+    
+    <Warning>
+    Some accounts cannot be closed if they are linked to active loans or other products. Resolve dependencies first.
+    </Warning>
+  </Step>
+
+  <Step title="Process Closure">
+    Enter closure details:
+    - Close date
+    - Closure reason
+    - Final withdrawal method (if balance exists)
+    - Close fee application
+    
+    System calculates:
+    - Final accrued interest
+    - Close fees
+    - Final balance to disburse
+  </Step>
+
+  <Step title="Confirm and Complete">
+    Review final account summary and click **Close Account**. The account status changes to Closed and no further transactions are allowed.
+  </Step>
+</Steps>
+
+## Savings Account Transfers
+
+Transfer funds between savings accounts:
+
+<Steps>
+  <Step title="Access Transfer Function">
+    Navigate to **Transfers** from the main menu.
+  </Step>
+
+  <Step title="Select Source and Destination">
+    **Source Account**
+    - Search and select the account to debit
+    - Verify sufficient balance
+    
+    **Destination Account**
+    - Search and select the account to credit
+    - Can be same or different client
+    - Verify account is active
+  </Step>
+
+  <Step title="Enter Transfer Details">
+    - Transfer amount
+    - Transfer date
+    - Description/reference
+    - Any applicable fees
+  </Step>
+
+  <Step title="Process Transfer">
+    Click **Process Transfer**. The system:
+    - Debits source account
+    - Credits destination account
+    - Records both transactions
+    - Creates accounting entries
+  </Step>
+</Steps>
+
+<Note>
+Internal transfers between accounts are typically instant. External transfers may require additional processing time depending on the payment method.
+</Note>
+
+## Printing Savings Documents
+
+Generate savings account documents:
+
+### Available Documents
+
+**Passbook/Statement**
+- Transaction history for a date range
+- Current balance
+- Account details
+
+**Account Summary**
+- Account information
+- Current balances
+- Interest details
+- Fee structure
+
+**Transaction Receipt**
+- Individual transaction details
+- Printable for client records
+
+### Generating Documents
+
+1. Navigate to **Print Out** tab
+2. Select document type
+3. Choose date range (for statements)
+4. Select format (PDF, DOCX)
+5. Click **Generate**
+6. Download or print
+
+## Savings Account Status
+
+Accounts can have different statuses:
+
+- **Active**: Account is operational, transactions allowed
+- **Inactive**: Account dormant but not closed
+- **Pending**: Account created but not yet approved
+- **Closed**: Account permanently closed
+
+Status changes are tracked in the account events history.
+
+## Bulk Operations
+
+For multiple accounts or clients:
+
+### Bulk Interest Posting
+
+- Automatically posts interest for all eligible accounts
+- Runs on scheduled basis (configured by admin)
+- Can be triggered manually for specific accounts
+
+### Bulk Fee Collection
+
+- Collects periodic fees from all accounts
+- Scheduled based on product configuration
+- Creates individual transactions for each account
+
+## Reporting on Savings
+
+Access savings reports:
+
+- **Account Balances**: Current balances for all accounts
+- **Transaction Summary**: Deposit and withdrawal totals
+- **Interest Posted**: Interest payment reports
+- **Fee Collection**: Fee revenue reports
+- **Dormant Accounts**: Inactive account analysis
+
+Navigate to **Reports** → **Savings Reports** to generate these reports.
+
+## Best Practices
+
+<Tip>
+**Savings Management Tips:**
+
+**Transaction Processing**
+- Verify account numbers before processing
+- Double-check amounts for large transactions
+- Print receipts for all transactions
+- Add descriptive notes for reference
+
+**Client Service**
+- Explain fees clearly to clients
+- Provide regular statements
+- Help clients understand interest calculation
+- Encourage regular deposits
+
+**Account Monitoring**
+- Review dormant accounts regularly
+- Monitor minimum balance compliance
+- Track fee collection
+- Identify unusual transaction patterns
+</Tip>
+
+## Troubleshooting Common Issues
+
+<Warning>
+**Common Errors:**
+
+**"Insufficient balance"**
+- Withdrawal amount + fees exceed available balance
+- Check minimum balance requirements
+- Verify no holds on the account
+
+**"Account not active"**
+- Account may be pending approval
+- Account may be closed or suspended
+- Check account status
+
+**"Withdrawal limit exceeded"**
+- Product may have daily/monthly withdrawal limits
+- Check product configuration
+- Contact administrator if limits need adjustment
+</Warning>
+
+## Related Features
+
+- [Client Management](/guides/client-management) - Managing account holders
+- [Accounting](/guides/accounting) - Transaction accounting entries
+- [Reports](/guides/reports) - Savings account reports

@@ -1,0 +1,698 @@
+---
+title: Users
+description: Manage system users and authentication in OpenCBS Cloud
+---
+
+The Users API provides endpoints for creating, updating, and retrieving user information. User operations follow a maker-checker workflow for enhanced security and compliance.
+
+## Create User
+
+<CodeGroup>
+```http Request
+POST /api/users
+```
+</CodeGroup>
+
+Creates a new user in the system. This operation follows the maker-checker pattern and creates a request that must be approved.
+
+### Request Body
+
+<ParamField body="username" type="string" required>
+  Unique username for login
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User password (will be encrypted)
+</ParamField>
+
+<ParamField body="firstName" type="string" required>
+  User's first name
+</ParamField>
+
+<ParamField body="lastName" type="string" required>
+  User's last name
+</ParamField>
+
+<ParamField body="roleId" type="long" required>
+  ID of the role to assign to the user
+</ParamField>
+
+<ParamField body="branchId" type="integer" required>
+  ID of the branch the user belongs to
+</ParamField>
+
+<ParamField body="email" type="string">
+  User's email address
+</ParamField>
+
+<ParamField body="phoneNumber" type="string">
+  User's phone number
+</ParamField>
+
+<ParamField body="idNumber" type="string">
+  User's identification number
+</ParamField>
+
+<ParamField body="address" type="string">
+  User's physical address
+</ParamField>
+
+<ParamField body="position" type="string">
+  User's job position/title
+</ParamField>
+
+<ParamField body="expireDate" type="string">
+  ISO 8601 date when the user account expires
+</ParamField>
+
+<ParamField body="statusType" type="string" default="ACTIVE">
+  User status (ACTIVE, INACTIVE, etc.)
+</ParamField>
+
+<CodeGroup>
+```json Request Example
+{
+  "username": "jsmith",
+  "password": "SecurePass123!",
+  "firstName": "John",
+  "lastName": "Smith",
+  "roleId": 2,
+  "branchId": 1,
+  "email": "john.smith@example.com",
+  "phoneNumber": "+1-555-0123",
+  "idNumber": "ID123456",
+  "address": "123 Main St, City, Country",
+  "position": "Loan Officer",
+  "expireDate": "2027-12-31",
+  "statusType": "ACTIVE"
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns a request ID that can be used to track the approval process.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the maker-checker request
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 42
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "username",
+      "message": "Username already exists"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Update User
+
+<CodeGroup>
+```http Request
+PUT /api/users/{id}
+```
+</CodeGroup>
+
+Updates an existing user. This operation follows the maker-checker pattern and creates a request that must be approved.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user to update
+</ParamField>
+
+### Request Body
+
+Accepts the same fields as the Create User endpoint (excluding password, which should be updated via the update-password endpoint).
+
+<CodeGroup>
+```json Request Example
+{
+  "username": "jsmith",
+  "firstName": "John",
+  "lastName": "Smith",
+  "roleId": 3,
+  "branchId": 1,
+  "email": "john.smith@newdomain.com",
+  "phoneNumber": "+1-555-0123",
+  "position": "Senior Loan Officer",
+  "statusType": "ACTIVE"
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns a request ID for the maker-checker approval process.
+
+<ResponseField name="id" type="long">
+  Unique identifier for the maker-checker request
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 43
+}
+```
+
+```json Error Response (404)
+{
+  "message": "User not found (ID=999).",
+  "status": 404
+}
+```
+</CodeGroup>
+
+---
+
+## Get Current User
+
+<CodeGroup>
+```http Request
+GET /api/users/current
+```
+</CodeGroup>
+
+Retrieves information about the currently authenticated user.
+
+### Response
+
+<ResponseField name="id" type="long">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  Username for login
+</ResponseField>
+
+<ResponseField name="firstName" type="string">
+  User's first name
+</ResponseField>
+
+<ResponseField name="lastName" type="string">
+  User's last name
+</ResponseField>
+
+<ResponseField name="role" type="object">
+  Role details object containing role information
+</ResponseField>
+
+<ResponseField name="branch" type="object">
+  Branch details object
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="phoneNumber" type="string">
+  User's phone number
+</ResponseField>
+
+<ResponseField name="isAdmin" type="boolean">
+  Whether the user has admin privileges
+</ResponseField>
+
+<ResponseField name="statusType" type="string">
+  Current user status
+</ResponseField>
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 5,
+  "username": "jsmith",
+  "firstName": "John",
+  "lastName": "Smith",
+  "role": {
+    "id": 2,
+    "name": "Loan Officer"
+  },
+  "branch": {
+    "id": 1,
+    "name": "Main Branch"
+  },
+  "email": "john.smith@example.com",
+  "phoneNumber": "+1-555-0123",
+  "isAdmin": false,
+  "position": "Loan Officer",
+  "statusType": "ACTIVE"
+}
+```
+</CodeGroup>
+
+---
+
+## Get User by ID
+
+<CodeGroup>
+```http Request
+GET /api/users/{id}
+```
+</CodeGroup>
+
+Retrieves detailed information about a specific user.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user
+</ParamField>
+
+### Response
+
+Returns the same structure as Get Current User.
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 5,
+  "username": "jsmith",
+  "firstName": "John",
+  "lastName": "Smith",
+  "role": {
+    "id": 2,
+    "name": "Loan Officer"
+  },
+  "branch": {
+    "id": 1,
+    "name": "Main Branch"
+  },
+  "email": "john.smith@example.com",
+  "phoneNumber": "+1-555-0123",
+  "isAdmin": false,
+  "statusType": "ACTIVE"
+}
+```
+
+```json Error Response (404)
+{
+  "message": "User not found (ID=999).",
+  "status": 404
+}
+```
+</CodeGroup>
+
+---
+
+## Get All Users
+
+<CodeGroup>
+```http Request
+GET /api/users
+```
+</CodeGroup>
+
+Retrieves a list of all users in the system.
+
+### Query Parameters
+
+<ParamField query="show_all" type="boolean" default="false">
+  If true, returns all users including inactive ones. If false, returns only active users.
+</ParamField>
+
+### Response
+
+Returns an array of user objects.
+
+<CodeGroup>
+```json Response Example
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "firstName": "System",
+    "lastName": "Administrator",
+    "role": {
+      "id": 1,
+      "name": "Administrator"
+    },
+    "branch": {
+      "id": 1,
+      "name": "Main Branch"
+    },
+    "email": "admin@example.com",
+    "isAdmin": true,
+    "statusType": "ACTIVE"
+  },
+  {
+    "id": 5,
+    "username": "jsmith",
+    "firstName": "John",
+    "lastName": "Smith",
+    "role": {
+      "id": 2,
+      "name": "Loan Officer"
+    },
+    "branch": {
+      "id": 1,
+      "name": "Main Branch"
+    },
+    "email": "john.smith@example.com",
+    "isAdmin": false,
+    "statusType": "ACTIVE"
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get Users for Lookup
+
+<CodeGroup>
+```http Request
+GET /api/users/lookup
+```
+</CodeGroup>
+
+Retrieves users with filtering options, typically used for dropdown/lookup components.
+
+### Query Parameters
+
+<ParamField query="branchId" type="long">
+  Filter users by branch ID
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search string to filter users by name or username
+</ParamField>
+
+<ParamField query="show_all" type="boolean" default="false">
+  Include inactive users
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+### Response
+
+Returns a paginated response with user objects.
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 5,
+      "username": "jsmith",
+      "firstName": "John",
+      "lastName": "Smith",
+      "role": {
+        "id": 2,
+        "name": "Loan Officer"
+      },
+      "branch": {
+        "id": 1,
+        "name": "Main Branch"
+      },
+      "email": "john.smith@example.com",
+      "statusType": "ACTIVE"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Get All Tellers
+
+<CodeGroup>
+```http Request
+GET /api/users/tellers
+```
+</CodeGroup>
+
+Retrieves all users with teller roles.
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Search string to filter tellers
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+### Response
+
+Returns a paginated list of users with teller roles.
+
+<CodeGroup>
+```json Response Example
+{
+  "content": [
+    {
+      "id": 8,
+      "username": "teller1",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "role": {
+        "id": 4,
+        "name": "Teller"
+      },
+      "branch": {
+        "id": 1,
+        "name": "Main Branch"
+      },
+      "statusType": "ACTIVE"
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+## Update Password
+
+<CodeGroup>
+```http Request
+PUT /api/users/update-password
+```
+</CodeGroup>
+
+Updates a user's password.
+
+### Request Body
+
+<ParamField body="userId" type="long" required>
+  ID of the user whose password is being updated
+</ParamField>
+
+<ParamField body="oldPassword" type="string">
+  Current password (required when users update their own password)
+</ParamField>
+
+<ParamField body="newPassword" type="string" required>
+  New password
+</ParamField>
+
+<CodeGroup>
+```json Request Example
+{
+  "userId": 5,
+  "oldPassword": "OldPass123!",
+  "newPassword": "NewSecurePass456!"
+}
+```
+</CodeGroup>
+
+### Response
+
+Returns the updated user object.
+
+<CodeGroup>
+```json Response Example
+{
+  "id": 5,
+  "username": "jsmith",
+  "firstName": "John",
+  "lastName": "Smith",
+  "statusType": "ACTIVE"
+}
+```
+
+```json Error Response (400)
+{
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "oldPassword",
+      "message": "Current password is incorrect"
+    }
+  ],
+  "status": 400
+}
+```
+</CodeGroup>
+
+---
+
+## Get User History
+
+<CodeGroup>
+```http Request
+GET /api/users/{id}/history
+```
+</CodeGroup>
+
+Retrieves the complete audit history of changes made to a user.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user
+</ParamField>
+
+### Response
+
+Returns an array of history entries showing all modifications to the user record.
+
+<CodeGroup>
+```json Response Example
+[
+  {
+    "revisionId": 12,
+    "timestamp": "2026-03-12T10:30:00Z",
+    "author": "admin",
+    "revisionType": "MOD",
+    "changes": {
+      "position": {
+        "old": "Loan Officer",
+        "new": "Senior Loan Officer"
+      }
+    }
+  },
+  {
+    "revisionId": 5,
+    "timestamp": "2026-02-01T09:00:00Z",
+    "author": "admin",
+    "revisionType": "ADD",
+    "changes": {}
+  }
+]
+```
+</CodeGroup>
+
+---
+
+## Get User History at Specific Time
+
+<CodeGroup>
+```http Request
+GET /api/users/{id}/history/last_change?dateTime={dateTime}
+```
+</CodeGroup>
+
+Retrieves the last change made to a user before or at a specific date and time.
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  The unique identifier of the user
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="dateTime" type="string" required>
+  ISO 8601 date-time string (e.g., "2026-03-12T10:30:00Z")
+</ParamField>
+
+### Response
+
+<CodeGroup>
+```json Response Example
+{
+  "revisionId": 12,
+  "timestamp": "2026-03-12T10:30:00Z",
+  "author": "admin",
+  "revisionType": "MOD",
+  "changes": {
+    "position": {
+      "old": "Loan Officer",
+      "new": "Senior Loan Officer"
+    }
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## Check Username Exists
+
+<CodeGroup>
+```http Request
+GET /api/users/find-by-username?username={username}
+```
+</CodeGroup>
+
+Checks if a username already exists in the system.
+
+### Query Parameters
+
+<ParamField query="username" type="string" required>
+  Username to check
+</ParamField>
+
+### Response
+
+Returns a boolean value indicating whether the username exists.
+
+<CodeGroup>
+```json Response Example (Username exists)
+true
+```
+
+```json Response Example (Username available)
+false
+```
+</CodeGroup>
+
+---
+
+## Permissions
+
+User creation and update operations require the `MAKER_FOR_USER` permission with the `MAKER_CHECKER` module type. This implements a two-step approval process where one user creates/updates and another approves the changes.
+
+## Notes
+
+- User ID 1 (system admin) cannot be updated or deleted
+- Password updates follow separate validation rules and do not require maker-checker approval
+- System users (internal service accounts) are excluded from lookup endpoints

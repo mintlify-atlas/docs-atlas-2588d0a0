@@ -1,0 +1,266 @@
+---
+title: 'Loans API Overview'
+description: 'Complete guide to managing loans, applications, products, and repayments in OpenCBS Cloud'
+---
+
+## Introduction
+
+The Loans API provides comprehensive functionality for managing the complete loan lifecycle in OpenCBS Cloud, from product configuration through disbursement, repayment, and closure. This API supports both individual and group lending models with sophisticated features including:
+
+- **Loan Product Management**: Configure lending products with custom terms, fees, and accounting rules
+- **Loan Applications**: Create and manage loan applications with credit committee workflows
+- **Loan Operations**: Handle disbursements, repayments, write-offs, and other loan operations
+- **Schedule Management**: Generate and modify loan repayment schedules
+- **Event Tracking**: Monitor all loan-related transactions and state changes
+
+## Core Concepts
+
+### Loan Lifecycle
+
+Loans in OpenCBS follow a structured lifecycle:
+
+1. **Application**: Create loan application with borrower details and terms
+2. **Review**: Submit for credit committee review and approval
+3. **Approval**: Application approved by authorized personnel
+4. **Disbursement**: Funds released to borrower account
+5. **Active**: Loan is active with ongoing repayments
+6. **Closed**: Loan fully repaid or written off
+
+### Maker-Checker Workflow
+
+Critical loan operations use a maker-checker approval workflow for security and compliance:
+
+- Loan product creation/editing
+- Loan disbursement
+- Loan repayment
+- Loan rollback
+
+These operations return a `RequestDto` with a request ID that must be approved by a checker before execution.
+
+### Module Types and Permissions
+
+The Loans API enforces role-based permissions across several module types:
+
+- `LOANS`: Core loan management operations
+- `LOAN_APPLICATIONS`: Application creation and management
+- `MAKER_CHECKER`: Approval workflow permissions
+
+Each endpoint specifies required permissions in the `@PermissionRequired` annotation.
+
+## Common Patterns
+
+### Pagination
+
+List endpoints support Spring Data pagination using `Pageable` parameters:
+
+```json
+{
+  "page": 0,
+  "size": 20,
+  "sort": "id,desc"
+}
+```
+
+Responses return a `Page` object with:
+
+<ResponseField name="content" type="array">
+  Array of result objects
+</ResponseField>
+
+<ResponseField name="totalElements" type="integer">
+  Total number of items across all pages
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="size" type="integer">
+  Items per page
+</ResponseField>
+
+<ResponseField name="number" type="integer">
+  Current page number (zero-based)
+</ResponseField>
+
+### Search and Filtering
+
+Many endpoints support search via query parameters:
+
+```bash
+GET /api/loans?search=john&page=0&size=20
+```
+
+The search parameter performs fuzzy matching across relevant fields (borrower name, loan code, etc.).
+
+### Date Formatting
+
+All date fields use ISO 8601 format:
+
+- **Dates**: `YYYY-MM-DD` (e.g., `2024-03-15`)
+- **DateTime**: `YYYY-MM-DDTHH:mm:ss` (e.g., `2024-03-15T14:30:00`)
+
+### Error Handling
+
+The API uses standard HTTP status codes and returns detailed error responses:
+
+```json
+{
+  "timestamp": "2024-03-15T14:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Loan not found (ID=123)",
+  "path": "/api/loans/123"
+}
+```
+
+<ResponseField name="timestamp" type="datetime">
+  When the error occurred
+</ResponseField>
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error type description
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Detailed error message
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Request path that caused the error
+</ResponseField>
+
+## Authentication
+
+All Loans API endpoints require authentication. Include your bearer token in the Authorization header:
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+See the [Authentication Guide](/api/authentication) for details on obtaining access tokens.
+
+## Base URL
+
+All endpoints are relative to your OpenCBS Cloud instance:
+
+```
+https://your-instance.opencbs.com
+```
+
+## API Categories
+
+<CardGroup cols={2}>
+  <Card title="Loan Products" icon="box" href="/api/loans/products">
+    Configure and manage loan products with custom terms and fees
+  </Card>
+  
+  <Card title="Loan Applications" icon="file-pen" href="/api/loans/applications">
+    Create and process loan applications through approval workflows
+  </Card>
+  
+  <Card title="Loan Management" icon="money-bill" href="/guides/loan-management">
+    Manage active loans, schedules, and operations
+  </Card>
+  
+  <Card title="Repayments" icon="hand-holding-dollar" href="/api/loans/repayments">
+    Process loan repayments and calculate payment splits
+  </Card>
+  
+  <Card title="Events" icon="timeline" href="/api/loans/events">
+    Track all loan-related events and transactions
+  </Card>
+</CardGroup>
+
+## Common Operations
+
+### Creating a Loan Application
+
+```bash
+POST /api/loan-applications
+```
+
+Create a new loan application with borrower details, product selection, and terms.
+
+### Approving and Disbursing
+
+```bash
+# 1. Submit application for review
+POST /api/loan-applications/{id}/submit
+
+# 2. Change status to approved
+POST /api/loan-applications/{id}/change-status
+
+# 3. Initiate disbursement (returns maker-checker request)
+POST /api/loan-applications/{id}/disburse
+```
+
+### Processing a Repayment
+
+```bash
+# 1. Calculate repayment split
+POST /api/loans/{loanId}/repayment/split
+
+# 2. Preview updated schedule
+POST /api/loans/{loanId}/repayment/preview
+
+# 3. Submit repayment (returns maker-checker request)
+POST /api/loans/{loanId}/repayment/repay
+```
+
+### Viewing Loan Details
+
+```bash
+# Get loan details
+GET /api/loans/{id}
+
+# Get loan schedule
+GET /api/loans/{loanId}/schedule
+
+# Get loan events
+GET /api/loans/{loanId}/events
+```
+
+## Rate Limits
+
+The API enforces rate limits to ensure system stability:
+
+- **Standard operations**: 100 requests per minute
+- **List/search operations**: 200 requests per minute
+- **Report generation**: 10 requests per minute
+
+Exceeding rate limits returns HTTP 429 (Too Many Requests).
+
+## Versioning
+
+The Loans API uses URL-based versioning. The current version is included in the base path:
+
+```
+/api/loans
+```
+
+Breaking changes will be introduced in new API versions while maintaining backward compatibility for existing versions.
+
+## Next Steps
+
+<Steps>
+  <Step title="Configure Loan Products">
+    Set up your lending products with appropriate terms and fees
+  </Step>
+  
+  <Step title="Create Applications">
+    Start processing loan applications for your borrowers
+  </Step>
+  
+  <Step title="Manage Disbursements">
+    Disburse approved loans to borrower accounts
+  </Step>
+  
+  <Step title="Process Repayments">
+    Handle incoming repayments and update loan schedules
+  </Step>
+</Steps>

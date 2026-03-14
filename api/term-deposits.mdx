@@ -1,0 +1,516 @@
+---
+title: 'Term Deposits API'
+description: 'Manage term deposit accounts and products in OpenCBS Cloud'
+---
+
+## Overview
+
+The Term Deposits API provides endpoints for managing term deposit accounts and products. Term deposits allow clients to deposit funds for a fixed period at a specified interest rate.
+
+## Term Deposits
+
+### Create Term Deposit
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/term-deposits \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profileId": 123,
+    "termDepositProductId": 5,
+    "interestRate": 5.5,
+    "termAgreement": 12,
+    "earlyCloseFeeRate": 1.5,
+    "earlyCloseFeeFlat": 10.00,
+    "serviceOfficerId": 45
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/term-deposits', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    profileId: 123,
+    termDepositProductId: 5,
+    interestRate: 5.5,
+    termAgreement: 12,
+    earlyCloseFeeRate: 1.5,
+    earlyCloseFeeFlat: 10.00,
+    serviceOfficerId: 45
+  })
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/term-deposits',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'profileId': 123,
+        'termDepositProductId': 5,
+        'interestRate': 5.5,
+        'termAgreement': 12,
+        'earlyCloseFeeRate': 1.5,
+        'earlyCloseFeeFlat': 10.00,
+        'serviceOfficerId': 45
+    }
+)
+```
+</CodeGroup>
+
+<ParamField body="profileId" type="number" required>
+  ID of the profile (client) opening the term deposit
+</ParamField>
+
+<ParamField body="termDepositProductId" type="number" required>
+  ID of the term deposit product to use
+</ParamField>
+
+<ParamField body="interestRate" type="number" required>
+  Annual interest rate (e.g., 5.5 for 5.5%)
+</ParamField>
+
+<ParamField body="termAgreement" type="number" required>
+  Term length in months
+</ParamField>
+
+<ParamField body="earlyCloseFeeRate" type="number">
+  Percentage fee for early closure
+</ParamField>
+
+<ParamField body="earlyCloseFeeFlat" type="number">
+  Flat fee amount for early closure
+</ParamField>
+
+<ParamField body="serviceOfficerId" type="number">
+  ID of the service officer managing this term deposit
+</ParamField>
+
+<ParamField body="locked" type="boolean">
+  Whether the term deposit is locked (defaults to false)
+</ParamField>
+
+<Expandable title="Response">
+<ResponseField name="id" type="number">
+  Unique identifier for the term deposit
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Term deposit account code
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Current deposit amount
+</ResponseField>
+
+<ResponseField name="profile" type="object">
+  Client profile information
+</ResponseField>
+
+<ResponseField name="termDepositProduct" type="object">
+  Product configuration details
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status (PENDING, OPEN, CLOSED)
+</ResponseField>
+
+<ResponseField name="interestRate" type="number">
+  Applied interest rate
+</ResponseField>
+
+<ResponseField name="termAgreement" type="number">
+  Term length in months
+</ResponseField>
+
+<ResponseField name="openDate" type="string">
+  Date when the term deposit was opened
+</ResponseField>
+
+<ResponseField name="locked" type="boolean">
+  Lock status of the deposit
+</ResponseField>
+</Expandable>
+
+---
+
+### Get Term Deposit
+
+Retrieve details of a specific term deposit by ID.
+
+```bash
+GET /api/term-deposits/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Term deposit ID
+</ParamField>
+
+<Expandable title="Response">
+<ResponseField name="id" type="number">
+  Term deposit ID
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Account code
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Current balance
+</ResponseField>
+
+<ResponseField name="profile" type="object">
+  Client profile details
+</ResponseField>
+
+<ResponseField name="termDepositProduct" type="object">
+  Product configuration
+</ResponseField>
+
+<ResponseField name="serviceOfficer" type="object">
+  Assigned service officer details
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Account status
+</ResponseField>
+
+<ResponseField name="accounts" type="object">
+  Associated accounting entries
+</ResponseField>
+
+<ResponseField name="interestRate" type="number">
+  Interest rate
+</ResponseField>
+
+<ResponseField name="openDate" type="string">
+  Opening date
+</ResponseField>
+
+<ResponseField name="createdDate" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="termAgreement" type="number">
+  Term duration in months
+</ResponseField>
+
+<ResponseField name="earlyCloseFeeRate" type="number">
+  Early closure fee percentage
+</ResponseField>
+
+<ResponseField name="earlyCloseFeeFlat" type="number">
+  Early closure flat fee
+</ResponseField>
+
+<ResponseField name="locked" type="boolean">
+  Lock status
+</ResponseField>
+</Expandable>
+
+---
+
+### List Term Deposits
+
+Retrieve a paginated list of all term deposits with optional search.
+
+```bash
+GET /api/term-deposits?search={query}&page={page}&size={size}
+```
+
+<ParamField query="search" type="string">
+  Search query to filter term deposits
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number (zero-indexed)
+</ParamField>
+
+<ParamField query="size" type="number">
+  Number of items per page
+</ParamField>
+
+---
+
+### Update Term Deposit
+
+Update term deposit details. Only available for deposits in PENDING status.
+
+```bash
+PUT /api/term-deposits/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Term deposit ID
+</ParamField>
+
+Request body uses the same structure as the create endpoint.
+
+---
+
+### Open Term Deposit
+
+Activate a term deposit with an initial deposit amount.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/term-deposits/123/open \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d "initialAmount=10000&openDate=2024-01-15"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  initialAmount: '10000',
+  openDate: '2024-01-15'
+});
+
+const response = await fetch(`https://api.opencbs.com/api/term-deposits/123/open?${params}`, {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+<ParamField path="id" type="number" required>
+  Term deposit ID
+</ParamField>
+
+<ParamField query="initialAmount" type="number" required>
+  Initial deposit amount
+</ParamField>
+
+<ParamField query="openDate" type="string" required>
+  Opening date (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+---
+
+### Close Term Deposit
+
+Close a term deposit account on a specified date.
+
+```bash
+POST /api/term-deposits/{id}/close?closeDate={date}
+```
+
+<ParamField path="id" type="number" required>
+  Term deposit ID
+</ParamField>
+
+<ParamField query="closeDate" type="string" required>
+  Closing date (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+---
+
+### Lock/Unlock Term Deposit
+
+Toggle the lock status of a term deposit. Locked deposits cannot be withdrawn from.
+
+```bash
+POST /api/term-deposits/{termDepositId}/lock-unlock
+```
+
+<ParamField path="termDepositId" type="number" required>
+  Term deposit ID
+</ParamField>
+
+---
+
+### Get Term Deposits by Profile
+
+Retrieve all term deposits for a specific client profile.
+
+```bash
+GET /api/term-deposits/by-profile/{profileId}
+```
+
+<ParamField path="profileId" type="number" required>
+  Profile (client) ID
+</ParamField>
+
+---
+
+### Get Accounting Entries
+
+Retrieve accounting entries associated with a term deposit.
+
+```bash
+GET /api/term-deposits/{termDepositId}/entries
+```
+
+<ParamField path="termDepositId" type="number" required>
+  Term deposit ID
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number">
+  Items per page
+</ParamField>
+
+---
+
+### Actualize Term Deposit
+
+Trigger the actualization process for a term deposit to calculate and apply accrued interest up to a specific date.
+
+```bash
+POST /api/term-deposits/actualize/{termDepositId}?date={date}
+```
+
+<ParamField path="termDepositId" type="number" required>
+  Term deposit ID
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Date to actualize to (ISO 8601 format: YYYY-MM-DD)
+</ParamField>
+
+Returns: `"Actualize term deposit started"`
+
+---
+
+## Term Deposit Products
+
+### List Term Deposit Products
+
+Retrieve all available term deposit products.
+
+```bash
+GET /api/term-deposit-products?search={query}&show_all={boolean}
+```
+
+<ParamField query="search" type="string">
+  Search query
+</ParamField>
+
+<ParamField query="show_all" type="boolean">
+  Include inactive products (default: false)
+</ParamField>
+
+---
+
+### Get Term Deposit Product
+
+Retrieve details of a specific term deposit product.
+
+```bash
+GET /api/term-deposit-products/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Product ID
+</ParamField>
+
+---
+
+### Create Term Deposit Product
+
+Create a new term deposit product. This creates a maker-checker request that requires approval.
+
+```bash
+POST /api/term-deposit-products
+```
+
+<Expandable title="Request Body">
+Include product configuration details such as:
+- Name and code
+- Interest rate ranges
+- Term length options
+- Fee structures
+- Account mapping rules
+</Expandable>
+
+<Expandable title="Response">
+<ResponseField name="id" type="number">
+  Request ID for the maker-checker approval process
+</ResponseField>
+</Expandable>
+
+---
+
+### Update Term Deposit Product
+
+Update an existing term deposit product. Creates a maker-checker request.
+
+```bash
+PUT /api/term-deposit-products/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Product ID
+</ParamField>
+
+---
+
+### Get Account Rules
+
+Retrieve available account rule types for term deposit products.
+
+```bash
+GET /api/term-deposit-products/account-rules
+```
+
+Returns an array of account rule enum values.
+
+---
+
+### Get Product History
+
+Retrieve the full revision history of a term deposit product.
+
+```bash
+GET /api/term-deposit-products/{id}/history
+```
+
+<ParamField path="id" type="number" required>
+  Product ID
+</ParamField>
+
+---
+
+### Get Product Last Change
+
+Get the last change made to a product before a specific date/time.
+
+```bash
+GET /api/term-deposit-products/{id}/history/last_change?dateTime={timestamp}
+```
+
+<ParamField path="id" type="number" required>
+  Product ID
+</ParamField>
+
+<ParamField query="dateTime" type="string" required>
+  Timestamp in ISO 8601 format (YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+---
+
+## Permissions
+
+The following permissions are required for term deposit operations:
+
+- `TERM_DEPOSIT_CREATE` - Create new term deposits
+- `TERM_DEPOSIT_UPDATE` - Update pending term deposits
+- `TERM_DEPOSIT_OPEN` - Open term deposits
+- `TERM_DEPOSIT_CLOSE` - Close term deposits
+- `TERM_DEPOSIT_LOCK` - Lock/unlock term deposits
+- `ACTUALIZE_TERM_DEPOSIT` - Trigger actualization
+- `MAKER_FOR_TERM_DEPOSIT_PRODUCT` - Create/update products (maker-checker)

@@ -1,0 +1,735 @@
+---
+title: "Savings Products"
+description: "API endpoints for creating and managing savings product templates"
+---
+
+## Overview
+
+Savings products define the templates and rules for savings accounts. They specify interest rates, fees, transaction limits, and other parameters that govern how savings accounts operate.
+
+All product operations follow a **maker-checker approval workflow** to ensure proper controls on configuration changes.
+
+## List Savings Products
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.opencbs.com/api/saving-products?search=basic&show_all=false&page=0&size=20" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/saving-products?page=0&size=20', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+  }
+});
+const products = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.opencbs.com/api/saving-products',
+    params={'page': 0, 'size': 20},
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+products = response.json()
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Search term to filter products by name or code
+</ParamField>
+
+<ParamField query="show_all" type="boolean" default="false">
+  When `false`, returns only active products. When `true`, returns all products regardless of status
+</ParamField>
+
+<ParamField query="page" type="integer" default="0">
+  Page number for pagination (0-indexed)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Sort field and direction (e.g., `name,asc` or `code,desc`)
+</ParamField>
+
+### Response
+
+<ResponseField name="content" type="array">
+  Array of savings products
+  <Expandable title="Product object">
+    <ResponseField name="id" type="long">
+      Unique product identifier
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Product name
+    </ResponseField>
+    <ResponseField name="code" type="string">
+      Product code
+    </ResponseField>
+    <ResponseField name="availability" type="array">
+      List of profile types this product is available for (e.g., ["PERSON", "COMPANY"])
+    </ResponseField>
+    <ResponseField name="initialAmountMin" type="decimal">
+      Minimum initial deposit amount
+    </ResponseField>
+    <ResponseField name="initialAmountMax" type="decimal">
+      Maximum initial deposit amount
+    </ResponseField>
+    <ResponseField name="interestRateMin" type="decimal">
+      Minimum interest rate (annual percentage)
+    </ResponseField>
+    <ResponseField name="interestRateMax" type="decimal">
+      Maximum interest rate (annual percentage)
+    </ResponseField>
+    <ResponseField name="interestAccrualFrequency" type="string">
+      How often interest is calculated (DAILY, WEEKLY, MONTHLY, ANNUALLY)
+    </ResponseField>
+    <ResponseField name="postingFrequency" type="string">
+      How often interest is posted to account (DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY)
+    </ResponseField>
+    <ResponseField name="capitalized" type="boolean">
+      Whether accrued interest is automatically added to principal
+    </ResponseField>
+    <ResponseField name="depositAmountMin" type="decimal">
+      Minimum deposit transaction amount
+    </ResponseField>
+    <ResponseField name="depositAmountMax" type="decimal">
+      Maximum deposit transaction amount
+    </ResponseField>
+    <ResponseField name="withdrawalAmountMin" type="decimal">
+      Minimum withdrawal transaction amount
+    </ResponseField>
+    <ResponseField name="withdrawalAmountMax" type="decimal">
+      Maximum withdrawal transaction amount
+    </ResponseField>
+    <ResponseField name="minBalance" type="decimal">
+      Minimum balance required in account
+    </ResponseField>
+    <ResponseField name="statusType" type="string">
+      Product status (ACTIVE, INACTIVE)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totalElements" type="integer">
+  Total number of products matching the query
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="number" type="integer">
+  Current page number (0-indexed)
+</ResponseField>
+
+<ResponseField name="size" type="integer">
+  Number of items per page
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Basic Savings",
+      "code": "SAV-001",
+      "availability": ["PERSON", "COMPANY"],
+      "initialAmountMin": 100.00,
+      "initialAmountMax": 10000.00,
+      "interestRateMin": 2.0,
+      "interestRateMax": 5.0,
+      "interestAccrualFrequency": "DAILY",
+      "postingFrequency": "MONTHLY",
+      "capitalized": true,
+      "depositAmountMin": 10.00,
+      "depositAmountMax": 50000.00,
+      "withdrawalAmountMin": 10.00,
+      "withdrawalAmountMax": 20000.00,
+      "minBalance": 50.00,
+      "statusType": "ACTIVE"
+    }
+  ],
+  "totalElements": 15,
+  "totalPages": 1,
+  "number": 0,
+  "size": 20
+}
+```
+
+---
+
+## Get Savings Product
+
+Retrieve detailed information about a specific savings product.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.opencbs.com/api/saving-products/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/saving-products/1', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+  }
+});
+const product = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings product ID
+</ParamField>
+
+### Response
+
+Returns a `SavingProductDetailsDto` object with complete product configuration.
+
+<ResponseField name="id" type="long">
+  Product identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Product name
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Product code
+</ResponseField>
+
+<ResponseField name="currency" type="object">
+  Currency configuration
+  <Expandable title="Currency details">
+    <ResponseField name="id" type="long">
+      Currency ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Currency name (e.g., "US Dollar")
+    </ResponseField>
+    <ResponseField name="code" type="string">
+      Currency code (e.g., "USD")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="accounts" type="object">
+  Account mapping configuration linking this product to chart of accounts
+</ResponseField>
+
+<ResponseField name="isReadOnly" type="boolean">
+  Whether the product is locked from editing (true if in use by accounts)
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "id": 1,
+  "name": "Basic Savings",
+  "code": "SAV-001",
+  "availability": ["PERSON", "COMPANY"],
+  "currency": {
+    "id": 1,
+    "name": "US Dollar",
+    "code": "USD"
+  },
+  "initialAmountMin": 100.00,
+  "initialAmountMax": 10000.00,
+  "interestRateMin": 2.0,
+  "interestRateMax": 5.0,
+  "interestAccrualFrequency": "DAILY",
+  "postingFrequency": "MONTHLY",
+  "capitalized": true,
+  "depositAmountMin": 10.00,
+  "depositAmountMax": 50000.00,
+  "depositFeeRateMin": 0.0,
+  "depositFeeRateMax": 1.0,
+  "depositFeeFlatMin": 0.0,
+  "depositFeeFlatMax": 5.0,
+  "withdrawalAmountMin": 10.00,
+  "withdrawalAmountMax": 20000.00,
+  "withdrawalFeeRateMin": 0.0,
+  "withdrawalFeeRateMax": 2.0,
+  "withdrawalFeeFlatMin": 0.0,
+  "withdrawalFeeFlatMax": 10.0,
+  "managementFeeRateMin": 0.0,
+  "managementFeeRateMax": 0.5,
+  "managementFeeFlatMin": 0.0,
+  "managementFeeFlatMax": 20.0,
+  "managementFeeFrequency": "MONTHLY",
+  "entryFeeRateMin": 0.0,
+  "entryFeeRateMax": 1.0,
+  "entryFeeFlatMin": 0.0,
+  "entryFeeFlatMax": 25.0,
+  "closeFeeRateMin": 0.0,
+  "closeFeeRateMax": 1.0,
+  "closeFeeFlatMin": 0.0,
+  "closeFeeFlatMax": 50.0,
+  "minBalance": 50.00,
+  "statusType": "ACTIVE",
+  "accounts": {
+    "savingAccountId": 1100,
+    "interestAccrualAccountId": 1110,
+    "interestExpenseAccountId": 5100,
+    "writeOffAccountId": 5200
+  },
+  "isReadOnly": false
+}
+```
+
+---
+
+## Create Savings Product
+
+Create a new savings product. This operation creates a maker-checker request that requires approval.
+
+<Note>
+  Requires `MAKER_FOR_SAVING_PRODUCT` permission. Returns a request ID that must be approved by a checker before the product becomes active.
+</Note>
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://api.opencbs.com/api/saving-products" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Premium Savings",
+    "code": "SAV-002",
+    "currencyId": 1,
+    "availability": ["PERSON"],
+    "initialAmountMin": 500.00,
+    "initialAmountMax": 50000.00,
+    "interestRateMin": 3.5,
+    "interestRateMax": 6.0,
+    "interestAccrualFrequency": "DAILY",
+    "postingFrequency": "MONTHLY",
+    "capitalized": true,
+    "depositAmountMin": 50.00,
+    "depositAmountMax": 100000.00,
+    "withdrawalAmountMin": 50.00,
+    "withdrawalAmountMax": 50000.00,
+    "minBalance": 100.00,
+    "accounts": {
+      "savingAccountId": 1100,
+      "interestAccrualAccountId": 1110,
+      "interestExpenseAccountId": 5100
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/saving-products', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Premium Savings',
+    code: 'SAV-002',
+    currencyId: 1,
+    availability: ['PERSON'],
+    initialAmountMin: 500.00,
+    initialAmountMax: 50000.00,
+    interestRateMin: 3.5,
+    interestRateMax: 6.0,
+    interestAccrualFrequency: 'DAILY',
+    postingFrequency: 'MONTHLY',
+    capitalized: true,
+    depositAmountMin: 50.00,
+    depositAmountMax: 100000.00,
+    withdrawalAmountMin: 50.00,
+    withdrawalAmountMax: 50000.00,
+    minBalance: 100.00
+  })
+});
+const request = await response.json();
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Product name
+</ParamField>
+
+<ParamField body="code" type="string" required>
+  Unique product code
+</ParamField>
+
+<ParamField body="currencyId" type="long" required>
+  Currency ID for this product
+</ParamField>
+
+<ParamField body="availability" type="array" required>
+  Profile types that can use this product (e.g., ["PERSON", "COMPANY"])
+</ParamField>
+
+<ParamField body="initialAmountMin" type="decimal" required>
+  Minimum initial deposit amount
+</ParamField>
+
+<ParamField body="initialAmountMax" type="decimal" required>
+  Maximum initial deposit amount
+</ParamField>
+
+<ParamField body="interestRateMin" type="decimal" required>
+  Minimum annual interest rate percentage
+</ParamField>
+
+<ParamField body="interestRateMax" type="decimal" required>
+  Maximum annual interest rate percentage
+</ParamField>
+
+<ParamField body="interestAccrualFrequency" type="string" required>
+  Interest calculation frequency: `DAILY`, `WEEKLY`, `MONTHLY`, `ANNUALLY`
+</ParamField>
+
+<ParamField body="postingFrequency" type="string" required>
+  Interest posting frequency: `DAILY`, `WEEKLY`, `MONTHLY`, `QUARTERLY`, `ANNUALLY`
+</ParamField>
+
+<ParamField body="capitalized" type="boolean" required>
+  Whether accrued interest is automatically added to principal
+</ParamField>
+
+<ParamField body="depositAmountMin" type="decimal" required>
+  Minimum deposit transaction amount
+</ParamField>
+
+<ParamField body="depositAmountMax" type="decimal" required>
+  Maximum deposit transaction amount
+</ParamField>
+
+<ParamField body="withdrawalAmountMin" type="decimal" required>
+  Minimum withdrawal transaction amount
+</ParamField>
+
+<ParamField body="withdrawalAmountMax" type="decimal" required>
+  Maximum withdrawal transaction amount
+</ParamField>
+
+<ParamField body="minBalance" type="decimal">
+  Minimum balance that must be maintained
+</ParamField>
+
+<ParamField body="accounts" type="object" required>
+  Account mapping configuration
+  <Expandable title="Account mapping fields">
+    <ParamField body="savingAccountId" type="long" required>
+      GL account for savings balances
+    </ParamField>
+    <ParamField body="interestAccrualAccountId" type="long">
+      GL account for accrued interest
+    </ParamField>
+    <ParamField body="interestExpenseAccountId" type="long">
+      GL account for interest expense
+    </ParamField>
+    <ParamField body="writeOffAccountId" type="long">
+      GL account for write-offs
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="depositFeeRateMin" type="decimal">
+  Minimum deposit fee rate (percentage)
+</ParamField>
+
+<ParamField body="depositFeeRateMax" type="decimal">
+  Maximum deposit fee rate (percentage)
+</ParamField>
+
+<ParamField body="depositFeeFlatMin" type="decimal">
+  Minimum flat deposit fee amount
+</ParamField>
+
+<ParamField body="depositFeeFlatMax" type="decimal">
+  Maximum flat deposit fee amount
+</ParamField>
+
+<ParamField body="withdrawalFeeRateMin" type="decimal">
+  Minimum withdrawal fee rate (percentage)
+</ParamField>
+
+<ParamField body="withdrawalFeeRateMax" type="decimal">
+  Maximum withdrawal fee rate (percentage)
+</ParamField>
+
+<ParamField body="withdrawalFeeFlatMin" type="decimal">
+  Minimum flat withdrawal fee amount
+</ParamField>
+
+<ParamField body="withdrawalFeeFlatMax" type="decimal">
+  Maximum flat withdrawal fee amount
+</ParamField>
+
+<ParamField body="managementFeeRateMin" type="decimal">
+  Minimum management fee rate (percentage)
+</ParamField>
+
+<ParamField body="managementFeeRateMax" type="decimal">
+  Maximum management fee rate (percentage)
+</ParamField>
+
+<ParamField body="managementFeeFlatMin" type="decimal">
+  Minimum flat management fee amount
+</ParamField>
+
+<ParamField body="managementFeeFlatMax" type="decimal">
+  Maximum flat management fee amount
+</ParamField>
+
+<ParamField body="managementFeeFrequency" type="string">
+  How often management fee is charged (DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY)
+</ParamField>
+
+<ParamField body="entryFeeRateMin" type="decimal">
+  Minimum entry/opening fee rate (percentage)
+</ParamField>
+
+<ParamField body="entryFeeRateMax" type="decimal">
+  Maximum entry/opening fee rate (percentage)
+</ParamField>
+
+<ParamField body="entryFeeFlatMin" type="decimal">
+  Minimum flat entry fee amount
+</ParamField>
+
+<ParamField body="entryFeeFlatMax" type="decimal">
+  Maximum flat entry fee amount
+</ParamField>
+
+<ParamField body="closeFeeRateMin" type="decimal">
+  Minimum closing fee rate (percentage)
+</ParamField>
+
+<ParamField body="closeFeeRateMax" type="decimal">
+  Maximum closing fee rate (percentage)
+</ParamField>
+
+<ParamField body="closeFeeFlatMin" type="decimal">
+  Minimum flat closing fee amount
+</ParamField>
+
+<ParamField body="closeFeeFlatMax" type="decimal">
+  Maximum flat closing fee amount
+</ParamField>
+
+### Response
+
+Returns a `RequestDto` object containing the maker-checker request ID.
+
+<ResponseField name="id" type="long">
+  Request ID for the maker-checker approval workflow
+</ResponseField>
+
+```json
+{
+  "id": 456
+}
+```
+
+<Note>
+  The product will not be active until the request is approved by a user with checker permissions. Use the request ID to track approval status.
+</Note>
+
+---
+
+## Update Savings Product
+
+Update an existing savings product. This operation creates a maker-checker request that requires approval.
+
+<Warning>
+  Products that are in use by active accounts may have restrictions on which fields can be modified.
+</Warning>
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://api.opencbs.com/api/saving-products/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Basic Savings Plus",
+    "interestRateMin": 2.5,
+    "interestRateMax": 5.5,
+    "depositAmountMax": 75000.00
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/saving-products/1', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Basic Savings Plus',
+    interestRateMin: 2.5,
+    interestRateMax: 5.5,
+    depositAmountMax: 75000.00
+  })
+});
+const request = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings product ID to update
+</ParamField>
+
+### Request Body
+
+Accepts the same fields as Create Savings Product. Only include fields you want to update.
+
+### Response
+
+Returns a `RequestDto` object containing the maker-checker request ID.
+
+```json
+{
+  "id": 457
+}
+```
+
+---
+
+## Get Product History
+
+Retrieve the complete change history for a savings product.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.opencbs.com/api/saving-products/1/history" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/saving-products/1/history', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+  }
+});
+const history = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings product ID
+</ParamField>
+
+### Response
+
+Returns an array of `HistoryDto` objects representing each revision.
+
+```json
+[
+  {
+    "revisionNumber": 3,
+    "timestamp": "2024-01-15T14:30:00",
+    "author": "john.doe",
+    "revisionType": "MOD",
+    "changes": [
+      {
+        "field": "interestRateMax",
+        "oldValue": "5.0",
+        "newValue": "5.5"
+      }
+    ]
+  },
+  {
+    "revisionNumber": 2,
+    "timestamp": "2024-01-10T09:15:00",
+    "author": "jane.smith",
+    "revisionType": "MOD",
+    "changes": [
+      {
+        "field": "name",
+        "oldValue": "Basic Savings",
+        "newValue": "Basic Savings Plus"
+      }
+    ]
+  },
+  {
+    "revisionNumber": 1,
+    "timestamp": "2024-01-01T08:00:00",
+    "author": "admin",
+    "revisionType": "ADD"
+  }
+]
+```
+
+---
+
+## Get Product at Point in Time
+
+Retrieve the product configuration as it existed at a specific date and time.
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.opencbs.com/api/saving-products/1/history/last_change?dateTime=2024-01-10T12:00:00" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.opencbs.com/api/saving-products/1/history/last_change?dateTime=2024-01-10T12:00:00',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const historicalProduct = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="long" required>
+  Savings product ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="dateTime" type="string" required>
+  ISO 8601 date-time (e.g., `2024-01-10T12:00:00`) to retrieve product state at that moment
+</ParamField>
+
+### Response
+
+Returns a `HistoryDto` object with the product configuration at the specified time.
+
+```json
+{
+  "revisionNumber": 2,
+  "timestamp": "2024-01-10T09:15:00",
+  "author": "jane.smith",
+  "revisionType": "MOD",
+  "entitySnapshot": {
+    "id": 1,
+    "name": "Basic Savings Plus",
+    "code": "SAV-001",
+    "interestRateMin": 2.0,
+    "interestRateMax": 5.0
+  }
+}
+```

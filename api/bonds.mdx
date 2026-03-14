@@ -1,0 +1,770 @@
+---
+title: 'Bonds API'
+description: 'Manage bond issuances, repayments, and products in OpenCBS Cloud'
+---
+
+## Overview
+
+The Bonds API enables financial institutions to manage bond issuances and track bond investments. Bonds represent debt securities issued by the institution or held as investments, with defined maturity dates, coupon payments, and interest rates.
+
+## Bonds
+
+### Create Bond
+
+Create a new bond in IN_PROGRESS status.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bondProductId": 5,
+    "profileId": 789,
+    "bankAccountId": 123,
+    "equivalentCurrencyId": 1,
+    "isin": "US0378331005",
+    "number": 1000,
+    "interestRate": 4.5,
+    "penaltyRate": 2.0,
+    "valueDate": "2024-01-15",
+    "couponDate": "2024-07-15",
+    "expireDate": "2029-01-15",
+    "frequency": "SEMI_ANNUAL",
+    "maturity": 60,
+    "interestScheme": "FLAT",
+    "sellDate": "2024-01-15"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    bondProductId: 5,
+    profileId: 789,
+    bankAccountId: 123,
+    equivalentCurrencyId: 1,
+    isin: 'US0378331005',
+    number: 1000,
+    interestRate: 4.5,
+    penaltyRate: 2.0,
+    valueDate: '2024-01-15',
+    couponDate: '2024-07-15',
+    expireDate: '2029-01-15',
+    frequency: 'SEMI_ANNUAL',
+    maturity: 60,
+    interestScheme: 'FLAT',
+    sellDate: '2024-01-15'
+  })
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/bonds',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'bondProductId': 5,
+        'profileId': 789,
+        'bankAccountId': 123,
+        'equivalentCurrencyId': 1,
+        'isin': 'US0378331005',
+        'number': 1000,
+        'interestRate': 4.5,
+        'penaltyRate': 2.0,
+        'valueDate': '2024-01-15',
+        'couponDate': '2024-07-15',
+        'expireDate': '2029-01-15',
+        'frequency': 'SEMI_ANNUAL',
+        'maturity': 60,
+        'interestScheme': 'FLAT',
+        'sellDate': '2024-01-15'
+    }
+)
+```
+</CodeGroup>
+
+<ParamField body="bondProductId" type="number" required>
+  ID of the bond product to use
+</ParamField>
+
+<ParamField body="profileId" type="number" required>
+  ID of the bondholder/investor profile
+</ParamField>
+
+<ParamField body="bankAccountId" type="number" required>
+  Bank account for transactions
+</ParamField>
+
+<ParamField body="equivalentCurrencyId" type="number">
+  Currency ID for equivalent value calculations
+</ParamField>
+
+<ParamField body="isin" type="string" required>
+  International Securities Identification Number (ISIN)
+</ParamField>
+
+<ParamField body="number" type="number" required>
+  Number of bonds or bond units
+</ParamField>
+
+<ParamField body="interestRate" type="number" required>
+  Annual coupon rate (e.g., 4.5 for 4.5%)
+</ParamField>
+
+<ParamField body="penaltyRate" type="number">
+  Penalty rate for early redemption or late payments
+</ParamField>
+
+<ParamField body="valueDate" type="string" required>
+  Value date when the bond becomes active (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="couponDate" type="string" required>
+  First coupon payment date (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="expireDate" type="string" required>
+  Bond maturity/expiration date (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="frequency" type="string" required>
+  Coupon payment frequency (e.g., MONTHLY, QUARTERLY, SEMI_ANNUAL, ANNUAL)
+</ParamField>
+
+<ParamField body="maturity" type="number" required>
+  Maturity period in months
+</ParamField>
+
+<ParamField body="interestScheme" type="string" required>
+  Interest calculation scheme (e.g., FLAT, DECLINING_BALANCE)
+</ParamField>
+
+<ParamField body="sellDate" type="string">
+  Date when bonds were sold/issued (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<Expandable title="Response">
+<ResponseField name="isin" type="string">
+  Bond ISIN
+</ResponseField>
+
+<ResponseField name="number" type="number">
+  Number of bond units
+</ResponseField>
+
+<ResponseField name="interestRate" type="number">
+  Coupon rate
+</ResponseField>
+
+<ResponseField name="penaltyRate" type="number">
+  Penalty rate
+</ResponseField>
+
+<ResponseField name="valueDate" type="string">
+  Value date
+</ResponseField>
+
+<ResponseField name="couponDate" type="string">
+  First coupon date
+</ResponseField>
+
+<ResponseField name="expireDate" type="string">
+  Maturity date
+</ResponseField>
+
+<ResponseField name="frequency" type="string">
+  Payment frequency
+</ResponseField>
+
+<ResponseField name="maturity" type="number">
+  Maturity in months
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Bond status (IN_PROGRESS, SOLD, MATURED)
+</ResponseField>
+
+<ResponseField name="installments" type="object">
+  Coupon payment schedule
+</ResponseField>
+
+<ResponseField name="bankAccount" type="object">
+  Bank account details
+</ResponseField>
+
+<ResponseField name="profile" type="object">
+  Bondholder profile
+</ResponseField>
+
+<ResponseField name="bondProduct" type="object">
+  Product configuration
+</ResponseField>
+
+<ResponseField name="bondAmount" type="object">
+  Bond amount calculations
+</ResponseField>
+
+<ResponseField name="interestToRefund" type="number">
+  Accrued interest to refund (if applicable)
+</ResponseField>
+</Expandable>
+
+---
+
+### Get Bond
+
+Retrieve details of a specific bond.
+
+```bash
+GET /api/bonds/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Bond ID
+</ParamField>
+
+---
+
+### Update Bond
+
+Update bond details. Only available when status is IN_PROGRESS.
+
+```bash
+PUT /api/bonds/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Bond ID
+</ParamField>
+
+Request body follows the same structure as create bond. Bond can only be edited while in IN_PROGRESS status.
+
+---
+
+### List Bonds
+
+Retrieve a paginated list of all bonds with optional search.
+
+```bash
+GET /api/bonds?search={query}&page={page}&size={size}
+```
+
+<ParamField query="search" type="string">
+  Search query to filter bonds (by ISIN, profile name, etc.)
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number (zero-indexed)
+</ParamField>
+
+<ParamField query="size" type="number">
+  Number of items per page
+</ParamField>
+
+---
+
+### Get Bonds by Profile
+
+Retrieve all bonds associated with a specific profile.
+
+```bash
+GET /api/bonds/by-profile/{profileId}
+```
+
+<ParamField path="profileId" type="number" required>
+  Profile (bondholder) ID
+</ParamField>
+
+---
+
+### Preview Bond Schedule
+
+Generate a preview of the coupon payment schedule without creating a bond.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds/preview \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "number": 500,
+    "interestRate": 5.0,
+    "valueDate": "2024-01-15",
+    "couponDate": "2024-07-15",
+    "expireDate": "2029-01-15",
+    "frequency": "SEMI_ANNUAL",
+    "maturity": 60,
+    "interestScheme": "FLAT"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds/preview', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    number: 500,
+    interestRate: 5.0,
+    valueDate: '2024-01-15',
+    couponDate: '2024-07-15',
+    expireDate: '2029-01-15',
+    frequency: 'SEMI_ANNUAL',
+    maturity: 60,
+    interestScheme: 'FLAT'
+  })
+});
+```
+</CodeGroup>
+
+Returns a complete schedule with coupon payment dates and amounts.
+
+---
+
+### Start Bond
+
+Activate a bond by marking it as sold/started.
+
+```bash
+POST /api/bonds/start/{id}
+```
+
+<ParamField path="id" type="number" required>
+  Bond ID
+</ParamField>
+
+Transitions the bond from IN_PROGRESS to SOLD status.
+
+---
+
+### Get Bond Schedule
+
+Retrieve the coupon payment schedule for an existing bond.
+
+```bash
+GET /api/bonds/{bondId}/schedule
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<Expandable title="Response">
+Returns installment details including:
+- Payment dates
+- Principal amounts
+- Interest/coupon amounts
+- Paid vs. outstanding amounts
+- Running balances
+</Expandable>
+
+---
+
+### Convert Bond Amount
+
+Calculate the equivalent bond amount in a different currency.
+
+```bash
+GET /api/bonds/convert-amount?quantity={qty}&currency={currencyId}&date={date}
+```
+
+<ParamField query="quantity" type="number" required>
+  Number of bond units
+</ParamField>
+
+<ParamField query="currency" type="number" required>
+  Target currency ID
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Valuation date (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+Returns the calculated bond amount in the specified currency.
+
+---
+
+### Calculate Expire Date
+
+Calculate the bond expiration date based on start date and maturity.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds/expire-date \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "valueDate": "2024-01-15",
+    "maturity": 60,
+    "frequency": "SEMI_ANNUAL"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds/expire-date', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    valueDate: '2024-01-15',
+    maturity: 60,
+    frequency: 'SEMI_ANNUAL'
+  })
+});
+```
+</CodeGroup>
+
+Returns the calculated expiration date.
+
+---
+
+### Set Value Date
+
+Update the value date for a bond.
+
+```bash
+POST /api/bonds/{bondId}/valueDate?date={date}
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  New value date (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+---
+
+### Actualize Bond
+
+Trigger the actualization process to calculate and apply accrued interest.
+
+```bash
+POST /api/bonds/actualize/{bondId}?date={date}
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Date to actualize to (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+Returns: `"Actualize bond was started"`
+
+---
+
+### Roll Back Bond Events
+
+Roll back the most recent events on a bond (e.g., undo a coupon payment).
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds/123/roll-back \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "comment": "Reversing incorrect coupon payment"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds/123/roll-back', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    comment: 'Reversing incorrect coupon payment'
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField body="comment" type="string" required>
+  Reason for rolling back events
+</ParamField>
+
+Returns a status message confirming the rollback.
+
+---
+
+## Bond Repayments
+
+### Preview Bond Repayment
+
+Preview how a repayment (coupon payment or principal) will be applied.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds/123/repayment/preview \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repaymentType": "NORMAL_REPAYMENT",
+    "total": 2500,
+    "timestamp": "2024-07-15T10:00:00"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds/123/repayment/preview', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    repaymentType: 'NORMAL_REPAYMENT',
+    total: 2500,
+    timestamp: '2024-07-15T10:00:00'
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField body="repaymentType" type="string" required>
+  Type of repayment (e.g., NORMAL_REPAYMENT, EARLY_TOTAL_REPAYMENT)
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  Total repayment amount
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  Payment timestamp (ISO 8601: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+---
+
+### Split Bond Repayment
+
+Calculate how a repayment amount will be split across principal, interest, and penalties.
+
+```bash
+POST /api/bonds/{bondId}/repayment/split
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+Request body uses the same structure as preview repayment.
+
+<Expandable title="Response">
+<ResponseField name="principal" type="number">
+  Amount applied to principal
+</ResponseField>
+
+<ResponseField name="interest" type="number">
+  Amount applied to interest/coupon
+</ResponseField>
+
+<ResponseField name="penalty" type="number">
+  Amount applied to penalties
+</ResponseField>
+</Expandable>
+
+---
+
+### Make Bond Repayment
+
+Process a repayment (coupon or principal payment) on a bond.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/bonds/123/repayment/repay \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repaymentType": "NORMAL_REPAYMENT",
+    "total": 2500,
+    "timestamp": "2024-07-15T10:00:00"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/bonds/123/repayment/repay', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    repaymentType: 'NORMAL_REPAYMENT',
+    total: 2500,
+    timestamp: '2024-07-15T10:00:00'
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField body="repaymentType" type="string" required>
+  Type of repayment
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  Total repayment amount
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  Payment timestamp (ISO 8601: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+---
+
+## Bond Events
+
+### Get Bond Events
+
+Retrieve all events (transactions) for a bond.
+
+```bash
+GET /api/bonds/{bondId}/events
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+Events include bond sales, coupon payments, accruals, penalties, and other transactions.
+
+<Expandable title="Response">
+Returns an array of event objects containing:
+- Event type
+- Effective date
+- Amounts (principal, interest, etc.)
+- Description
+- Related accounting entries
+</Expandable>
+
+---
+
+### Get Events by Group Key
+
+Retrieve all events that share the same group key (related transactions).
+
+```bash
+GET /api/bonds/{bondId}/events/{groupKey}
+```
+
+<ParamField path="bondId" type="number" required>
+  Bond ID
+</ParamField>
+
+<ParamField path="groupKey" type="number" required>
+  Event group key
+</ParamField>
+
+---
+
+## Bond Products
+
+### Get Default Bond Product
+
+Retrieve the default bond product configuration.
+
+```bash
+GET /api/bond-products/default
+```
+
+<Expandable title="Response">
+<ResponseField name="id" type="number">
+  Product ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Product name
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Product code
+</ResponseField>
+
+<ResponseField name="interestRateMin" type="number">
+  Minimum interest rate
+</ResponseField>
+
+<ResponseField name="interestRateMax" type="number">
+  Maximum interest rate
+</ResponseField>
+
+<ResponseField name="availableFrequencies" type="array">
+  Allowed payment frequencies
+</ResponseField>
+
+<ResponseField name="currency" type="object">
+  Default currency
+</ResponseField>
+</Expandable>
+
+---
+
+## Permissions
+
+The following permissions control access to bond operations:
+
+- `BONDS` - View bond accounts
+- `BONDS_CREATE` - Create new bonds
+- `BONDS_UPDATE` - Update bonds in IN_PROGRESS status
+- `BONDS_SELL` - Start/activate bonds
+- `ACTUALIZE_BONDS` - Trigger bond actualization
+- `ROLLBACK_BOND_EVENTS` - Roll back bond transactions
+- `VALUE_DATE_BOND_EVENTS` - Modify bond value dates
+
+---
+
+## Common Use Cases
+
+### Issuing Corporate Bonds
+
+1. **Create bond**: POST to `/api/bonds` with bond details
+2. **Preview schedule**: Verify coupon payment dates and amounts
+3. **Start bond**: POST to `/api/bonds/start/{id}` to activate
+4. **Process coupons**: Use repayment endpoints to record coupon payments
+5. **Track events**: Monitor all transactions via events endpoint
+
+### Bond Investment Tracking
+
+1. **Create bond**: Record bond purchase with ISIN and details
+2. **Set value date**: Establish when the bond becomes active
+3. **Actualize regularly**: Keep accrued interest up to date
+4. **Record coupons**: Process incoming coupon payments
+5. **Monitor to maturity**: Track bond until expiration date
+
+### Currency Conversion
+
+When bonds are denominated in foreign currencies:
+1. Set `equivalentCurrencyId` to your base currency
+2. Use `/api/bonds/convert-amount` to get current valuations
+3. Actualization will handle exchange rate fluctuations

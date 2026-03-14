@@ -1,0 +1,671 @@
+---
+title: 'Borrowings API'
+description: 'Manage borrowing accounts, repayments, and products in OpenCBS Cloud'
+---
+
+## Overview
+
+The Borrowings API enables financial institutions to manage borrowing accounts (institutional loans), where the organization borrows money from external sources. This is distinct from loans where the institution lends to clients.
+
+## Borrowings
+
+### Create Borrowing
+
+Create a new borrowing account in PENDING status.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowings \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "borrowingProductId": 10,
+    "profileId": 456,
+    "correspondenceAccountId": 789,
+    "amount": 100000,
+    "interestRate": 8.5,
+    "scheduleType": "ANNUITY",
+    "maturity": 24,
+    "gracePeriod": 2,
+    "preferredRepaymentDate": "2024-02-01",
+    "disbursementDate": "2024-01-15"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowings', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    borrowingProductId: 10,
+    profileId: 456,
+    correspondenceAccountId: 789,
+    amount: 100000,
+    interestRate: 8.5,
+    scheduleType: 'ANNUITY',
+    maturity: 24,
+    gracePeriod: 2,
+    preferredRepaymentDate: '2024-02-01',
+    disbursementDate: '2024-01-15'
+  })
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.opencbs.com/api/borrowings',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'borrowingProductId': 10,
+        'profileId': 456,
+        'correspondenceAccountId': 789,
+        'amount': 100000,
+        'interestRate': 8.5,
+        'scheduleType': 'ANNUITY',
+        'maturity': 24,
+        'gracePeriod': 2,
+        'preferredRepaymentDate': '2024-02-01',
+        'disbursementDate': '2024-01-15'
+    }
+)
+```
+</CodeGroup>
+
+<ParamField body="borrowingProductId" type="number" required>
+  ID of the borrowing product to use
+</ParamField>
+
+<ParamField body="profileId" type="number" required>
+  ID of the lender profile
+</ParamField>
+
+<ParamField body="correspondenceAccountId" type="number" required>
+  ID of the correspondence account for transactions
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Borrowing amount
+</ParamField>
+
+<ParamField body="interestRate" type="number" required>
+  Annual interest rate (e.g., 8.5 for 8.5%)
+</ParamField>
+
+<ParamField body="scheduleType" type="string" required>
+  Repayment schedule type (e.g., ANNUITY, EQUAL_INSTALLMENTS, DECLINING_BALANCE)
+</ParamField>
+
+<ParamField body="maturity" type="number" required>
+  Loan term in months or installments
+</ParamField>
+
+<ParamField body="gracePeriod" type="number">
+  Grace period in installments
+</ParamField>
+
+<ParamField body="preferredRepaymentDate" type="string">
+  Preferred date for repayments (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="disbursementDate" type="string" required>
+  Date when funds will be disbursed (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+<Expandable title="Response">
+<ResponseField name="id" type="number">
+  Unique identifier for the borrowing
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  Borrowing account code
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Borrowing amount
+</ResponseField>
+
+<ResponseField name="borrowingProduct" type="object">
+  Product configuration details
+</ResponseField>
+
+<ResponseField name="profile" type="object">
+  Lender profile information
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status (PENDING, ACTIVE, CLOSED)
+</ResponseField>
+
+<ResponseField name="interestRate" type="number">
+  Applied interest rate
+</ResponseField>
+
+<ResponseField name="scheduleType" type="string">
+  Repayment schedule type
+</ResponseField>
+
+<ResponseField name="maturity" type="number">
+  Loan term
+</ResponseField>
+
+<ResponseField name="gracePeriod" type="number">
+  Grace period
+</ResponseField>
+
+<ResponseField name="createdBy" type="object">
+  User who created the borrowing
+</ResponseField>
+
+<ResponseField name="correspondenceAccount" type="object">
+  Account details for transactions
+</ResponseField>
+</Expandable>
+
+---
+
+### Get Borrowing
+
+Retrieve details of a specific borrowing account.
+
+```bash
+GET /api/borrowings/{borrowingId}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+---
+
+### Update Borrowing
+
+Update a borrowing account. Only available when status is PENDING.
+
+```bash
+PUT /api/borrowings/{borrowingId}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+Request body follows the same structure as create borrowing.
+
+---
+
+### List Borrowings
+
+Retrieve a paginated list of all borrowings with optional search.
+
+```bash
+GET /api/borrowings?search={query}&page={page}&size={size}
+```
+
+<ParamField query="search" type="string">
+  Search query to filter borrowings
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number (zero-indexed)
+</ParamField>
+
+<ParamField query="size" type="number">
+  Number of items per page
+</ParamField>
+
+---
+
+### Get Borrowings by Profile
+
+Retrieve all borrowings associated with a specific lender profile.
+
+```bash
+GET /api/borrowings/by-profile/{profileId}
+```
+
+<ParamField path="profileId" type="number" required>
+  Profile (lender) ID
+</ParamField>
+
+---
+
+### Preview Borrowing Schedule
+
+Generate a preview of the repayment schedule without creating a borrowing.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowings/preview \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50000,
+    "interestRate": 7.5,
+    "scheduleType": "ANNUITY",
+    "maturity": 12,
+    "disbursementDate": "2024-01-15"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowings/preview', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    amount: 50000,
+    interestRate: 7.5,
+    scheduleType: 'ANNUITY',
+    maturity: 12,
+    disbursementDate: '2024-01-15'
+  })
+});
+```
+</CodeGroup>
+
+Returns a complete repayment schedule with installment details.
+
+---
+
+### Disburse Borrowing
+
+Activate a PENDING borrowing by disbursing the funds.
+
+```bash
+POST /api/borrowings/{borrowingId}/disburse
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+The borrowing must be in PENDING status. After disbursement, status changes to ACTIVE.
+
+---
+
+### Get Borrowing Schedule
+
+Retrieve the current repayment schedule for an active borrowing.
+
+```bash
+GET /api/borrowings/{borrowingId}/schedule
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<Expandable title="Response">
+Returns a schedule object with:
+- List of installments
+- Payment amounts (principal, interest)
+- Due dates
+- Paid amounts
+- Outstanding balances
+</Expandable>
+
+---
+
+### Roll Back Borrowing Event
+
+Roll back the last event on a borrowing account (e.g., undo a repayment).
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowings/123/roll-back \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "comment": "Reversing incorrect payment posted on wrong date"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowings/123/roll-back', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    comment: 'Reversing incorrect payment posted on wrong date'
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<ParamField body="comment" type="string" required>
+  Reason for rolling back the event
+</ParamField>
+
+---
+
+### Actualize Borrowing
+
+Trigger the actualization process to calculate and apply accrued interest.
+
+```bash
+POST /api/borrowings/actualize/{borrowingId}?date={date}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<ParamField query="date" type="string" required>
+  Date to actualize to (ISO 8601: YYYY-MM-DD)
+</ParamField>
+
+Returns: `"Actualize borrowing started"`
+
+---
+
+## Borrowing Repayments
+
+### Preview Repayment
+
+Preview how a repayment will be applied without actually making the payment.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowings/123/repayment/preview \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repaymentType": "NORMAL_REPAYMENT",
+    "total": 5000,
+    "timestamp": "2024-01-15T10:00:00"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowings/123/repayment/preview', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    repaymentType: 'NORMAL_REPAYMENT',
+    total: 5000,
+    timestamp: '2024-01-15T10:00:00'
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<ParamField body="repaymentType" type="string" required>
+  Type of repayment (e.g., NORMAL_REPAYMENT, EARLY_TOTAL_REPAYMENT)
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  Total repayment amount
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  Payment timestamp (ISO 8601: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+---
+
+### Split Repayment
+
+Calculate how a repayment amount will be split across principal, interest, fees, and penalties.
+
+```bash
+POST /api/borrowings/{borrowingId}/repayment/split
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+Request body uses the same structure as preview repayment.
+
+<Expandable title="Response">
+<ResponseField name="principal" type="number">
+  Amount applied to principal
+</ResponseField>
+
+<ResponseField name="interest" type="number">
+  Amount applied to interest
+</ResponseField>
+
+<ResponseField name="penalty" type="number">
+  Amount applied to penalties
+</ResponseField>
+
+<ResponseField name="fees" type="number">
+  Amount applied to fees
+</ResponseField>
+</Expandable>
+
+---
+
+### Make Repayment
+
+Process a repayment on a borrowing account.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowings/123/repayment/repay \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repaymentType": "NORMAL_REPAYMENT",
+    "total": 5000,
+    "timestamp": "2024-01-15T10:00:00",
+    "paymentMethodId": 1
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowings/123/repayment/repay', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    repaymentType: 'NORMAL_REPAYMENT',
+    total: 5000,
+    timestamp: '2024-01-15T10:00:00',
+    paymentMethodId: 1
+  })
+});
+```
+</CodeGroup>
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<ParamField body="repaymentType" type="string" required>
+  Type of repayment
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  Total repayment amount
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  Payment timestamp (ISO 8601: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+<ParamField body="paymentMethodId" type="number">
+  Payment method ID
+</ParamField>
+
+---
+
+## Borrowing Events
+
+### Get Borrowing Events
+
+Retrieve all events (transactions) for a borrowing account.
+
+```bash
+GET /api/borrowings/{borrowingId}/events
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+Events include disbursement, repayments, accruals, fees, and other transactions.
+
+---
+
+### Get Events by Group Key
+
+Retrieve all events that share the same group key (related transactions).
+
+```bash
+GET /api/borrowings/{borrowingId}/events/{groupKey}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Borrowing ID
+</ParamField>
+
+<ParamField path="groupKey" type="number" required>
+  Event group key
+</ParamField>
+
+---
+
+## Borrowing Products
+
+### List Borrowing Products
+
+Retrieve all available borrowing products.
+
+```bash
+GET /api/borrowing-products?page={page}&size={size}
+```
+
+<ParamField query="page" type="number">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number">
+  Items per page
+</ParamField>
+
+---
+
+### Get Borrowing Product
+
+Retrieve details of a specific borrowing product.
+
+```bash
+GET /api/borrowing-products/{borrowingId}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Product ID
+</ParamField>
+
+---
+
+### Create Borrowing Product
+
+Create a new borrowing product configuration.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.opencbs.com/api/borrowing-products \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Institutional Line of Credit",
+    "code": "INST-LOC-001",
+    "interestRateMin": 5.0,
+    "interestRateMax": 12.0,
+    "amountMin": 10000,
+    "amountMax": 1000000,
+    "maturityMin": 6,
+    "maturityMax": 60,
+    "scheduleTypes": ["ANNUITY", "DECLINING_BALANCE"],
+    "currency": {"id": 1}
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.opencbs.com/api/borrowing-products', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Institutional Line of Credit',
+    code: 'INST-LOC-001',
+    interestRateMin: 5.0,
+    interestRateMax: 12.0,
+    amountMin: 10000,
+    amountMax: 1000000,
+    maturityMin: 6,
+    maturityMax: 60,
+    scheduleTypes: ['ANNUITY', 'DECLINING_BALANCE'],
+    currency: { id: 1 }
+  })
+});
+```
+</CodeGroup>
+
+---
+
+### Update Borrowing Product
+
+Update an existing borrowing product.
+
+```bash
+PUT /api/borrowing-products/{borrowingId}
+```
+
+<ParamField path="borrowingId" type="number" required>
+  Product ID
+</ParamField>
+
+Request body follows the same structure as create product.
+
+---
+
+### Get Account Rules
+
+Retrieve available account rule types for borrowing products.
+
+```bash
+GET /api/borrowing-products/account-rules
+```
+
+Returns an array of `BorrowingRuleType` enum values that define how accounting entries are created.
+
+---
+
+## Permissions
+
+The following permissions control access to borrowing operations:
+
+- `GET_BORROWINGS` - View borrowing accounts
+- `ACTUALIZE_BORROWINGS` - Trigger actualization
+- `PAST_REPAYMENTS` - Make repayments with past dates

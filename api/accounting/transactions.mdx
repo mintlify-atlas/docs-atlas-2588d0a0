@@ -1,0 +1,592 @@
+---
+title: 'Transactions & Transfers'
+description: 'Transfer funds between accounts and execute multiple transactions'
+---
+
+The Transactions API provides convenient endpoints for transferring funds between accounts and executing multiple transactions in a batch.
+
+## Transfer To Account
+
+Transfer funds to a specific account from another account.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/123/transfer-to" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 456,
+    "amount": 1000.00,
+    "description": "Transfer to savings account",
+    "documentNumber": "TRF-2024-001"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/accounts/123/transfer-to',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountId: 456,
+      amount: 1000.00,
+      description: 'Transfer to savings account',
+      documentNumber: 'TRF-2024-001'
+    })
+  }
+);
+const entry = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://your-instance.opencbs.com/api/accounting/accounts/123/transfer-to',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'accountId': 456,
+        'amount': 1000.00,
+        'description': 'Transfer to savings account',
+        'documentNumber': 'TRF-2024-001'
+    }
+)
+entry = response.json()
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="number" required>
+  Source account ID (the account funds are being transferred FROM)
+</ParamField>
+
+### Request Body
+
+<ParamField body="accountId" type="number" required>
+  Destination account ID (the account funds are being transferred TO)
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Transfer amount (must be positive)
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Transfer description
+</ParamField>
+
+<ParamField body="documentNumber" type="string">
+  Reference document or transaction number
+</ParamField>
+
+### Response
+
+Returns the created accounting entry representing the transfer.
+
+```json
+{
+  "id": 2001,
+  "amount": 1000.00,
+  "debitAccountNumber": "2010-456",
+  "debitAccountName": "Member Savings - Jane Smith",
+  "creditAccountNumber": "1010-001",
+  "creditAccountName": "Cash on Hand - Main Branch",
+  "description": "Transfer to savings account",
+  "documentNumber": "TRF-2024-001",
+  "branchName": "Head Office",
+  "createdByFullName": "John Doe",
+  "createdAt": "2024-03-15T14:30:00",
+  "effectiveAt": "2024-03-15T14:30:00"
+}
+```
+
+### How It Works
+
+<Note>
+  The `transfer-to` endpoint:
+  1. Debits the destination account (accountId in request body)
+  2. Credits the source account (id in URL path)
+  3. Creates a single accounting entry
+  
+  Example: Transferring cash TO a member savings account
+  - Source: Cash account (credited - decreased)
+  - Destination: Savings account (debited - increased)
+</Note>
+
+### Validation Rules
+
+<Warning>
+  The following validations are enforced:
+  
+  - Source account must have `allowedTransferFrom` set to `true`
+  - Destination account must have `allowedTransferTo` set to `true`
+  - Amount must be greater than zero
+  - Both accounts must exist and be BALANCE type accounts
+  - Accounts must not be locked
+  - Accounts must have the same currency
+  - Description is required
+</Warning>
+
+---
+
+## Transfer From Account
+
+Transfer funds from a specific account to another account.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/456/transfer-from" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 123,
+    "amount": 500.00,
+    "description": "Withdrawal from savings",
+    "documentNumber": "WD-2024-002"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/accounts/456/transfer-from',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountId: 123,
+      amount: 500.00,
+      description: 'Withdrawal from savings',
+      documentNumber: 'WD-2024-002'
+    })
+  }
+);
+const entry = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="number" required>
+  Source account ID (the account funds are being withdrawn FROM)
+</ParamField>
+
+### Request Body
+
+<ParamField body="accountId" type="number" required>
+  Destination account ID (the account receiving the funds)
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Transfer amount (must be positive)
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Transfer description
+</ParamField>
+
+<ParamField body="documentNumber" type="string">
+  Reference document or transaction number
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": 2002,
+  "amount": 500.00,
+  "debitAccountNumber": "1010-001",
+  "debitAccountName": "Cash on Hand - Main Branch",
+  "creditAccountNumber": "2010-456",
+  "creditAccountName": "Member Savings - Jane Smith",
+  "description": "Withdrawal from savings",
+  "documentNumber": "WD-2024-002",
+  "branchName": "Head Office",
+  "createdByFullName": "John Doe",
+  "createdAt": "2024-03-15T15:00:00",
+  "effectiveAt": "2024-03-15T15:00:00"
+}
+```
+
+### How It Works
+
+<Note>
+  The `transfer-from` endpoint:
+  1. Credits the source account (id in URL path)
+  2. Debits the destination account (accountId in request body)
+  3. Creates a single accounting entry
+  
+  Example: Transferring FROM a member savings account to cash
+  - Source: Savings account (credited - decreased)
+  - Destination: Cash account (debited - increased)
+</Note>
+
+---
+
+## Difference Between Transfer-To and Transfer-From
+
+Both endpoints create the same accounting entry but differ in perspective:
+
+<CodeGroup>
+```bash Transfer TO Savings (from cash perspective)
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/123/transfer-to" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 456,
+    "amount": 1000.00,
+    "description": "Savings deposit"
+  }'
+
+# Result: Cash (123) credited, Savings (456) debited
+# Cash decreases, Savings increases
+```
+
+```bash Transfer FROM Savings (from savings perspective)
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/456/transfer-from" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 123,
+    "amount": 1000.00,
+    "description": "Savings withdrawal"
+  }'
+
+# Result: Savings (456) credited, Cash (123) debited
+# Savings decreases, Cash increases
+```
+</CodeGroup>
+
+| Operation | URL Account | Body Account | URL Account Effect | Body Account Effect |
+|-----------|-------------|--------------|-------------------|--------------------|
+| transfer-to | Source | Destination | Credited (−) | Debited (+) |
+| transfer-from | Source | Destination | Credited (−) | Debited (+) |
+
+---
+
+## Multiple Transactions
+
+Execute multiple transfers in a single operation, where one account is involved in all transactions.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/multiple" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 101,
+    "accountWillBeDebit": false,
+    "description": "Salary payments for March 2024",
+    "dateTime": "2024-03-31T17:00:00",
+    "amounts": [
+      {
+        "accountId": 501,
+        "amount": 3500.00
+      },
+      {
+        "accountId": 502,
+        "amount": 3200.00
+      },
+      {
+        "accountId": 503,
+        "amount": 2800.00
+      }
+    ]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/multiple',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountId: 101,
+      accountWillBeDebit: false,
+      description: 'Salary payments for March 2024',
+      dateTime: '2024-03-31T17:00:00',
+      amounts: [
+        { accountId: 501, amount: 3500.00 },
+        { accountId: 502, amount: 3200.00 },
+        { accountId: 503, amount: 2800.00 }
+      ]
+    })
+  }
+);
+const entries = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://your-instance.opencbs.com/api/accounting/multiple',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'accountId': 101,
+        'accountWillBeDebit': False,
+        'description': 'Salary payments for March 2024',
+        'dateTime': '2024-03-31T17:00:00',
+        'amounts': [
+            {'accountId': 501, 'amount': 3500.00},
+            {'accountId': 502, 'amount': 3200.00},
+            {'accountId': 503, 'amount': 2800.00}
+        ]
+    }
+)
+entries = response.json()
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="accountId" type="number" required>
+  The common account involved in all transactions
+</ParamField>
+
+<ParamField body="accountWillBeDebit" type="boolean" required>
+  Whether the common account will be debited (`true`) or credited (`false`)
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Description for all transactions
+</ParamField>
+
+<ParamField body="dateTime" type="string">
+  Transaction date and time (ISO 8601 format: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+<ParamField body="amounts" type="array" required>
+  Array of transaction amounts
+  <Expandable title="amounts item properties">
+    <ParamField body="accountId" type="number" required>
+      Account ID for this transaction
+    </ParamField>
+    
+    <ParamField body="amount" type="number" required>
+      Transaction amount (must be positive)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+Returns an array of accounting entries, one for each transaction.
+
+```json
+[
+  {
+    "id": 3001,
+    "amount": 3500.00,
+    "debitAccountNumber": "5010-001",
+    "debitAccountName": "Salary Expense - Employee 1",
+    "creditAccountNumber": "1010-001",
+    "creditAccountName": "Cash on Hand",
+    "description": "Salary payments for March 2024",
+    "documentNumber": null,
+    "branchName": "Head Office",
+    "createdByFullName": "John Doe",
+    "createdAt": "2024-03-31T17:00:00",
+    "effectiveAt": "2024-03-31T17:00:00"
+  },
+  {
+    "id": 3002,
+    "amount": 3200.00,
+    "debitAccountNumber": "5010-002",
+    "debitAccountName": "Salary Expense - Employee 2",
+    "creditAccountNumber": "1010-001",
+    "creditAccountName": "Cash on Hand",
+    "description": "Salary payments for March 2024",
+    "documentNumber": null,
+    "branchName": "Head Office",
+    "createdByFullName": "John Doe",
+    "createdAt": "2024-03-31T17:00:00",
+    "effectiveAt": "2024-03-31T17:00:00"
+  },
+  {
+    "id": 3003,
+    "amount": 2800.00,
+    "debitAccountNumber": "5010-003",
+    "debitAccountName": "Salary Expense - Employee 3",
+    "creditAccountNumber": "1010-001",
+    "creditAccountName": "Cash on Hand",
+    "description": "Salary payments for March 2024",
+    "documentNumber": null,
+    "branchName": "Head Office",
+    "createdByFullName": "John Doe",
+    "createdAt": "2024-03-31T17:00:00",
+    "effectiveAt": "2024-03-31T17:00:00"
+  }
+]
+```
+
+### Use Cases
+
+<Note>
+  Multiple transactions are useful for:
+  
+  **Cash disbursements from one account**
+  - Set `accountWillBeDebit: false` (account is credited/reduced)
+  - Example: Paying multiple employees from cash account
+  
+  **Cash receipts into one account**
+  - Set `accountWillBeDebit: true` (account is debited/increased)
+  - Example: Collecting loan repayments from multiple borrowers
+  
+  **Split transactions**
+  - Allocate one transaction across multiple accounts
+  - Example: Recording expense with multiple categories
+</Note>
+
+### Example: Collecting Multiple Loan Repayments
+
+```json
+{
+  "accountId": 101,
+  "accountWillBeDebit": true,
+  "description": "Daily loan collections - March 15, 2024",
+  "dateTime": "2024-03-15T16:00:00",
+  "amounts": [
+    {
+      "accountId": 1001,
+      "amount": 500.00
+    },
+    {
+      "accountId": 1002,
+      "amount": 750.00
+    },
+    {
+      "accountId": 1003,
+      "amount": 1000.00
+    }
+  ]
+}
+```
+
+This creates three entries:
+1. Debit Cash 101 / Credit Loan 1001 for 500.00
+2. Debit Cash 101 / Credit Loan 1002 for 750.00
+3. Debit Cash 101 / Credit Loan 1003 for 1000.00
+
+Cash increases by 2,250.00, and three loan accounts decrease accordingly.
+
+---
+
+## Print Receipt
+
+Generate a receipt for multiple transactions.
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/multiple/printReceipt" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 101,
+    "accountWillBeDebit": false,
+    "description": "Salary payments for March 2024",
+    "dateTime": "2024-03-31T17:00:00",
+    "amounts": [
+      {"accountId": 501, "amount": 3500.00},
+      {"accountId": 502, "amount": 3200.00}
+    ]
+  }' \
+  --output receipt.pdf
+```
+</CodeGroup>
+
+### Request Body
+
+Same structure as the multiple transactions endpoint.
+
+### Response
+
+Returns a PDF file containing a formatted receipt for the transactions.
+
+<Note>
+  This endpoint generates a receipt document without actually creating the transactions. Use the regular `/multiple` endpoint to execute the transactions.
+</Note>
+
+---
+
+## Common Transfer Scenarios
+
+### Cash Deposit to Member Account
+
+```bash
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/101/transfer-to" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 2001,
+    "amount": 1000.00,
+    "description": "Member cash deposit",
+    "documentNumber": "DEP-2024-123"
+  }'
+```
+
+**Result:** Cash (101) credited −1000, Member Account (2001) debited +1000
+
+### Cash Withdrawal from Member Account
+
+```bash
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/2001/transfer-from" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 101,
+    "amount": 500.00,
+    "description": "Member cash withdrawal",
+    "documentNumber": "WD-2024-456"
+  }'
+```
+
+**Result:** Member Account (2001) credited −500, Cash (101) debited +500
+
+### Internal Transfer Between Member Accounts
+
+```bash
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/2001/transfer-from" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 2002,
+    "amount": 250.00,
+    "description": "Transfer to another member",
+    "documentNumber": "TRF-2024-789"
+  }'
+```
+
+**Result:** Source Account (2001) credited −250, Destination Account (2002) debited +250
+
+### Bank Deposit from Cash
+
+```bash
+curl -X POST "https://your-instance.opencbs.com/api/accounting/accounts/101/transfer-to" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": 102,
+    "amount": 10000.00,
+    "description": "Deposit cash to bank",
+    "documentNumber": "BANK-2024-001"
+  }'
+```
+
+**Result:** Cash (101) credited −10000, Bank Account (102) debited +10000

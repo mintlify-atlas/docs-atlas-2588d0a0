@@ -1,0 +1,225 @@
+---
+title: Client Management
+description: Learn how to manage clients, groups, and companies in OpenCBS Cloud
+---
+
+Managing clients is a core function in OpenCBS Cloud. The system supports three profile types: individuals (people), companies, and groups. This guide walks you through creating and managing client profiles.
+
+## Profile Types
+
+OpenCBS Cloud supports three distinct profile types:
+
+- **People**: Individual clients with personal information
+- **Companies**: Corporate entities and business clients
+- **Groups**: Collections of individual members for group lending
+
+Each profile type has customizable fields organized into sections for flexible data collection.
+
+## Creating a New Profile
+
+<Steps>
+  <Step title="Navigate to Profiles">
+    From the main menu, click on **Profiles** to access the profile management area.
+  </Step>
+
+  <Step title="Select Profile Type">
+    Click the **Create** button and select the profile type:
+    - **Create Person** for individual clients
+    - **Create Company** for corporate clients
+    - **Create Group** for group lending
+  </Step>
+
+  <Step title="Complete Profile Sections">
+    Profiles are organized into customizable sections. Navigate through each section using the sidebar navigation to complete all required fields.
+
+    <Note>
+    Required fields are marked with an asterisk (*). You must complete all required fields before submitting.
+    </Note>
+
+    Common profile sections include:
+    - Basic Information (name, contact details)
+    - Address Information
+    - Identification Documents
+    - Custom Fields (configured per institution)
+  </Step>
+
+  <Step title="Submit the Profile">
+    After completing all sections, click **Submit** to create the profile. The system validates all fields and displays a success message upon creation.
+  </Step>
+</Steps>
+
+<Tip>
+The profile creation form automatically saves your progress as you move between sections, allowing you to complete the process over multiple sessions if needed.
+</Tip>
+
+## Viewing Profile Information
+
+Once created, you can view comprehensive profile information:
+
+<Tabs>
+  <Tab title="Profile Overview">
+    The **Info** tab displays all profile data organized by sections:
+    
+    - Personal or company details
+    - Contact information
+    - Custom field values
+    - Attached documents and photos
+    
+    Use the section navigation on the left to quickly jump to specific information.
+  </Tab>
+
+  <Tab title="Financial Products">
+    Access related financial products from the profile:
+    
+    - **Loans**: View all loans associated with the client
+    - **Loan Applications**: Track pending loan applications
+    - **Savings**: Access savings accounts
+    - **Current Accounts**: View transaction accounts
+    - **Credit Lines**: Manage available credit facilities
+  </Tab>
+
+  <Tab title="Activity History">
+    - **Events**: Complete audit trail of all profile activities
+    - **Comments**: Internal notes and comments about the client
+    - **Attachments**: Documents, images, and files related to the profile
+  </Tab>
+</Tabs>
+
+## Editing Profile Information
+
+To update an existing profile:
+
+<Steps>
+  <Step title="Open the Profile">
+    Navigate to **Profiles** and search for the client by name, ID, or other criteria. Click on the profile to open it.
+  </Step>
+
+  <Step title="Enter Edit Mode">
+    Click the **Edit** button in the top-right corner of the profile information page.
+  </Step>
+
+  <Step title="Modify Fields">
+    Update the necessary fields. The form layout matches the creation form with all sections available.
+  </Step>
+
+  <Step title="Save Changes">
+    Click **Save** to apply changes. The system validates updated data before saving.
+  </Step>
+</Steps>
+
+<Warning>
+Some profile changes may require approval through the Maker-Checker workflow, depending on your institution's configuration. Modified profiles will appear in the Maker-Checker queue for approval.
+</Warning>
+
+## Managing Group Profiles
+
+Group profiles have special features for managing members:
+
+### Adding Members to a Group
+
+1. Open the group profile
+2. Navigate to the **Members** tab
+3. Click **Add Member**
+4. Search for and select existing client profiles
+5. Define member-specific information (join date, member ID)
+6. Click **Save**
+
+### Group Loan Applications
+
+When creating loan applications for groups:
+
+- You can allocate amounts to individual members
+- The total loan amount is the sum of member allocations
+- Each member's portion is tracked separately
+- Repayments can be made collectively or by individual members
+
+<Note>
+Group members must be existing profiles in the system. Create individual profiles first before adding them to a group.
+</Note>
+
+## Profile Attachments
+
+Upload and manage documents related to profiles:
+
+### Adding Attachments
+
+1. Open the profile and navigate to the **Attachments** section
+2. Click **Upload** or drag and drop files
+3. Add a description for the attachment
+4. Click **Save**
+
+### Supported File Types
+
+- Images (JPG, PNG, GIF) - viewable in the system
+- Documents (PDF, DOC, DOCX)
+- Spreadsheets (XLS, XLSX)
+- Other common file formats
+
+<Tip>
+Image attachments can be previewed directly in the system. Click on an image attachment to view it in a modal window.
+</Tip>
+
+## Profile Search and Filtering
+
+Efficiently find profiles using search and filter capabilities:
+
+### Search Options
+
+- **Name Search**: Enter full or partial names
+- **ID Search**: Search by profile ID or custom identification numbers
+- **Advanced Filters**: Filter by profile type, status, branch, or custom fields
+
+### List View Features
+
+The profile list displays:
+- Profile name and type
+- Contact information
+- Current status
+- Associated branch
+- Quick action buttons
+
+## Custom Fields
+
+OpenCBS Cloud supports custom field sections configured by administrators:
+
+- Fields can be text, numbers, dates, dropdowns, or lookups
+- Required/optional field settings
+- Field validation rules
+- Section-based organization
+
+Custom fields appear in the profile creation and editing forms automatically based on the profile type.
+
+## Profile Status Management
+
+Profiles can have different statuses:
+
+- **Active**: Profile is active and can be used for transactions
+- **Inactive**: Profile is deactivated but data is retained
+- **Pending Approval**: Profile changes awaiting approval (Maker-Checker)
+
+Status changes are tracked in the Events tab for audit purposes.
+
+## Best Practices
+
+<Tip>
+**Data Quality Tips:**
+- Verify identification numbers before saving
+- Ensure contact information is current
+- Upload clear, legible ID documents
+- Use consistent naming conventions
+- Complete all available fields for better reporting
+</Tip>
+
+<Warning>
+**Security Considerations:**
+- Profile data is sensitive - only authorized users should have access
+- Document all significant profile changes in comments
+- Regularly review and update contact information
+- Verify client identity before making major changes
+</Warning>
+
+## Related Features
+
+- [Loan Management](/guides/loan-management) - Creating loans for clients
+- [Savings Management](/guides/savings-management) - Managing client savings accounts
+- [Reports](/guides/reports) - Generating client reports

@@ -1,0 +1,432 @@
+---
+title: Building from Source
+description: Complete guide to building OpenCBS Cloud backend and frontend from source code
+---
+
+This guide walks you through building OpenCBS Cloud from source using Maven for the backend modules and npm/Yarn for the Angular frontend.
+
+## Project Structure
+
+OpenCBS Cloud is organized as a multi-module Maven project:
+
+```
+opencbs-cloud/
+├── server/
+│   ├── opencbs-core/              # Core domain logic
+│   ├── opencbs-spring-boot-starter/  # Spring Boot configuration
+│   ├── opencbs-server/            # Main application module
+│   ├── opencbs-loans/             # Loan management module
+│   ├── opencbs-savings/           # Savings account module
+│   ├── opencbs-borrowings/        # Borrowings module
+│   ├── opencbs-term-deposits/     # Term deposits module
+│   ├── opencbs-bonds/             # Bonds module
+│   └── pom.xml                    # Parent POM
+└── client/                        # Angular frontend
+    ├── src/
+    ├── package.json
+    └── Dockerfile
+```
+
+## Prerequisites
+
+Ensure you have completed the [System Requirements](/deployment/requirements) setup:
+
+- Java 8 JDK
+- Maven 3.3+
+- Node.js 10.x or 12.x
+- Yarn or npm
+- Git (for cloning the repository)
+
+## Cloning the Repository
+
+<Steps>
+  <Step title="Clone the source code">
+    ```bash
+    git clone https://github.com/opencbs/opencbs-cloud.git
+    cd opencbs-cloud
+    ```
+  </Step>
+
+  <Step title="Verify project structure">
+    ```bash
+    ls -la
+    # Should show: server/ client/ build.sh README.md
+    ```
+  </Step>
+</Steps>
+
+## Building the Backend
+
+### Understanding the Build Process
+
+The OpenCBS Cloud backend consists of multiple Maven modules that must be built in a specific order due to dependencies:
+
+1. **opencbs-spring-boot-starter** - Base Spring Boot configuration
+2. **opencbs-core** - Core domain models and services
+3. **opencbs-loans** - Loan management functionality
+4. **opencbs-borrowings** - Borrowings module
+5. **opencbs-savings** - Savings accounts module
+6. **opencbs-term-deposits** - Term deposits module
+7. **opencbs-bonds** - Bonds module
+8. **opencbs-server** - Main application (bundles all modules)
+
+### Using the Build Script
+
+The repository includes a build script that automates the entire build process.
+
+<CodeGroup>
+```bash Build Script Usage
+./build.sh -build <version> -instance <name>
+
+# Example:
+./build.sh -build 1.0.0 -instance my-finance
+```
+
+```bash Script Help
+./build.sh
+# Shows usage information
+```
+</CodeGroup>
+
+<Warning>
+The build script requires two arguments:
+- **version**: Build version (e.g., 1.0.0)
+- **instance**: Instance name without "opencbs" prefix (e.g., my-finance, impact-finance)
+</Warning>
+
+### Build Script Breakdown
+
+Here's what the build script does:
+
+<Steps>
+  <Step title="Build Spring Boot Starter">
+    ```bash
+    mvn -f ./server/opencbs-spring-boot-starter/pom.xml clean install -DskipTests
+    ```
+    
+    Builds the base Spring Boot configuration module.
+  </Step>
+
+  <Step title="Build Core Module">
+    ```bash
+    mvn -f ./server/opencbs-core/pom.xml clean install -DskipTests
+    ```
+    
+    Compiles core domain models, services, and shared functionality.
+  </Step>
+
+  <Step title="Build Feature Modules">
+    ```bash
+    mvn -f ./server/opencbs-loans/pom.xml clean install -DskipTests
+    mvn -f ./server/opencbs-borrowings/pom.xml clean install -DskipTests
+    mvn -f ./server/opencbs-savings/pom.xml clean install -DskipTests
+    mvn -f ./server/opencbs-term-deposits/pom.xml clean install -DskipTests
+    mvn -f ./server/opencbs-bonds/pom.xml clean install -DskipTests
+    ```
+    
+    Builds all feature modules in dependency order.
+  </Step>
+
+  <Step title="Build Instance-Specific JAR">
+    ```bash
+    mvn -f ./server/opencbs-$INSTANCE/pom_backend.xml clean install jar:jar -DBUILD_VERSION=$VERSION
+    ```
+    
+    Creates the final executable JAR with your specified version and instance name.
+  </Step>
+</Steps>
+
+### Manual Build (Without Script)
+
+If you prefer to build manually or need more control:
+
+```bash
+# Navigate to server directory
+cd server
+
+# Build all modules from parent POM
+mvn clean install -DskipTests
+
+# Or build individual modules
+mvn -f opencbs-spring-boot-starter/pom.xml clean install
+mvn -f opencbs-core/pom.xml clean install
+mvn -f opencbs-loans/pom.xml clean install
+# ... continue for other modules
+```
+
+<Note>
+The `-DskipTests` flag skips unit tests during build. Remove it to run tests (requires database connection).
+</Note>
+
+### Build Output
+
+Successful backend build produces:
+
+- JAR files in `target/` directory of each module
+- Main executable: `server/opencbs-server/target/opencbs-server-{version}.jar`
+- Installed artifacts in local Maven repository (`~/.m2/repository/`)
+
+## Building the Frontend
+
+The Angular client uses Angular 8 and requires Node.js and a package manager.
+
+### Install Dependencies
+
+<Steps>
+  <Step title="Navigate to client directory">
+    ```bash
+    cd client
+    ```
+  </Step>
+
+  <Step title="Install npm packages">
+    <CodeGroup>
+    ```bash Using Yarn (Recommended)
+    yarn install
+    ```
+
+    ```bash Using npm
+    npm install
+    ```
+    </CodeGroup>
+
+    This installs all dependencies from `package.json` including Angular 8, Material, NgRx, and other libraries.
+  </Step>
+</Steps>
+
+### Development Build
+
+For development and testing:
+
+```bash
+# Using npm
+npm run build
+
+# Using Yarn
+yarn build
+```
+
+This runs:
+```bash
+node --max_old_space_size=8192 node_modules/@angular/cli/bin/ng build
+```
+
+<Note>
+The development build allocates 8 GB of heap space to Node.js. Ensure your system has sufficient memory.
+</Note>
+
+### Production Build
+
+For production deployment with optimization:
+
+```bash
+# Using npm
+npm run build-prod
+
+# Using Yarn
+yarn build-prod
+```
+
+This runs:
+```bash
+node --max_old_space_size=16314 node_modules/@angular/cli/bin/ng build --prod
+```
+
+Production build features:
+- Ahead-of-time (AOT) compilation
+- Minification and uglification
+- Dead code elimination
+- Production environment configuration
+
+<Warning>
+Production builds require up to 16 GB of Node.js heap space. This may take 5-15 minutes depending on your hardware.
+</Warning>
+
+### Build Output
+
+The Angular build creates a `dist/` directory containing:
+
+```
+client/dist/
+├── index.html
+├── main.{hash}.js
+├── polyfills.{hash}.js
+├── runtime.{hash}.js
+├── styles.{hash}.css
+└── assets/
+```
+
+These static files are served by the Spring Boot backend or a separate web server.
+
+## Integrated Build (Backend + Frontend)
+
+The main server module includes Maven plugins to build the Angular client during the backend build:
+
+```bash
+cd server/opencbs-server
+mvn clean package
+```
+
+This triggers:
+
+1. **yarn** - Installs client dependencies
+2. **yarn build-prod** - Builds Angular production bundle
+3. **maven-resources-plugin** - Copies `dist/` to `target/classes/static/`
+4. **spring-boot-maven-plugin** - Creates executable JAR with embedded frontend
+
+The result is a single JAR file containing both backend and frontend.
+
+## Build Customization
+
+### Skipping Frontend Build
+
+To build only the backend:
+
+```bash
+mvn clean package -DskipTests -Dmaven.exec.skip=true
+```
+
+### Custom Build Version
+
+Specify version at build time:
+
+```bash
+mvn clean package -DBUILD_VERSION=2.0.0
+```
+
+### Maven Profiles
+
+The project supports integration test profile:
+
+```bash
+mvn clean install -Pintegration
+```
+
+## Build Troubleshooting
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="OutOfMemoryError during Angular build">
+    Increase Node.js heap size in `package.json`:
+    
+    ```json
+    "build-prod": "node --max_old_space_size=20480 node_modules/@angular/cli/bin/ng build --prod"
+    ```
+    
+    Or add system swap space if RAM is limited.
+  </Accordion>
+
+  <Accordion title="Maven dependency resolution failures">
+    Clear Maven cache and retry:
+    
+    ```bash
+    rm -rf ~/.m2/repository/com/opencbs
+    mvn clean install -U
+    ```
+  </Accordion>
+
+  <Accordion title="Java version mismatch">
+    Ensure Java 8 is active:
+    
+    ```bash
+    java -version
+    # Should show: java version "1.8.x"
+    
+    # Switch to Java 8 if using multiple versions
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk
+    ```
+  </Accordion>
+
+  <Accordion title="Yarn/npm install fails">
+    Clear cache and retry:
+    
+    ```bash
+    # For Yarn
+    yarn cache clean
+    rm -rf node_modules
+    yarn install
+    
+    # For npm
+    npm cache clean --force
+    rm -rf node_modules
+    npm install
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Build Performance Tips
+
+1. **Use local Maven repository**: Ensure `~/.m2/settings.xml` uses local repository
+2. **Parallel builds**: Add `-T 1C` to Maven commands for parallel module builds
+3. **Skip tests**: Use `-DskipTests` during development iterations
+4. **Incremental builds**: Use `mvn compile` instead of `clean install` for minor changes
+
+## Verifying the Build
+
+<Steps>
+  <Step title="Check JAR file">
+    ```bash
+    ls -lh server/opencbs-server/target/*.jar
+    # Should show a JAR file (typically 80-150 MB)
+    ```
+  </Step>
+
+  <Step title="Check frontend build">
+    ```bash
+    ls -la client/dist/
+    # Should contain index.html and JavaScript bundles
+    ```
+  </Step>
+
+  <Step title="Test JAR execution">
+    ```bash
+    java -jar server/opencbs-server/target/opencbs-server-*.jar --help
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+After successfully building OpenCBS Cloud:
+
+1. [Set up the database](/deployment/database-setup)
+2. Configure application properties
+3. [Deploy to cloud platforms](/deployment/cloud-deployment)
+4. Set up monitoring and logging
+
+## Docker Build
+
+For containerized builds, see the Dockerfiles:
+
+**Backend Dockerfile** (`server/opencbs-server/Dockerfile`):
+```dockerfile
+FROM java:8-jdk-alpine
+LABEL maintainer="Bektur Mambetov"
+WORKDIR /usr/app
+COPY ./target/*.jar /usr/app/cloud.jar
+COPY ./src/main/resources/application-docker.properties /usr/app/application.properties
+CMD ["/bin/sh", "-c", "java -jar /usr/app/cloud.jar -Djava.security.egd=file:/dev/./urandom -Dspring.config.location = /usr/app/application.properties"]
+```
+
+**Frontend Dockerfile** (`client/Dockerfile`):
+```dockerfile
+FROM nginx:1.15.8-alpine
+LABEL maintainer="Bektur Mambetov"
+COPY default.conf /etc/nginx/conf.d/default.conf
+COPY dist /usr/share/nginx/html
+```
+
+Build Docker images:
+
+```bash
+# Build backend image
+cd server/opencbs-server
+mvn clean package
+docker build -t opencbs-server:latest .
+
+# Build frontend image
+cd ../../client
+yarn build-prod
+docker build -t opencbs-client:latest .
+```

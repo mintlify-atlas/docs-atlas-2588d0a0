@@ -1,0 +1,809 @@
+---
+title: 'Loan Products'
+description: 'Manage loan product configurations, terms, fees, and accounting rules'
+---
+
+## Overview
+
+Loan Products define the templates and rules for creating loans in OpenCBS Cloud. Each product specifies:
+
+- Interest rates and calculation methods
+- Maturity ranges and grace periods
+- Entry fees and penalties
+- Accounting rules for financial transactions
+- Eligibility criteria and availability
+- Top-up configurations
+
+All loan product creation and modification operations use the maker-checker approval workflow for compliance and control.
+
+## Endpoints
+
+### List Loan Products
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/loan-products?page=0&size=20&show_all=false" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loan-products?page=0&size=20&show_all=false',
+  {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const products = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-instance.opencbs.com/api/loan-products',
+    params={'page': 0, 'size': 20, 'show_all': False},
+    headers={'Authorization': 'Bearer YOUR_ACCESS_TOKEN'}
+)
+products = response.json()
+```
+</CodeGroup>
+
+```
+GET /api/loan-products
+```
+
+Retrieve a paginated list of loan products. By default, only active products are returned.
+
+#### Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  Page number (zero-based)
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+<ParamField query="show_all" type="boolean" default="false">
+  When `true`, returns both active and inactive products. When `false`, returns only active products.
+</ParamField>
+
+#### Response
+
+Returns a paginated list of `LoanProductDetailsDto` objects.
+
+<Expandable title="Response Schema">
+  <ResponseField name="content" type="array">
+    Array of loan product objects
+    
+    <Expandable title="LoanProductDetailsDto">
+      <ResponseField name="id" type="integer">
+        Unique product identifier
+      </ResponseField>
+      
+      <ResponseField name="name" type="string">
+        Product name
+      </ResponseField>
+      
+      <ResponseField name="code" type="string">
+        Product code for reference
+      </ResponseField>
+      
+      <ResponseField name="currency" type="object">
+        Currency configuration
+        
+        <Expandable title="CurrencyDto">
+          <ResponseField name="id" type="integer">
+            Currency ID
+          </ResponseField>
+          
+          <ResponseField name="name" type="string">
+            Currency name (e.g., "US Dollar")
+          </ResponseField>
+          
+          <ResponseField name="code" type="string">
+            ISO currency code (e.g., "USD")
+          </ResponseField>
+        </Expandable>
+      </ResponseField>
+      
+      <ResponseField name="amountMin" type="decimal">
+        Minimum loan amount
+      </ResponseField>
+      
+      <ResponseField name="amountMax" type="decimal">
+        Maximum loan amount
+      </ResponseField>
+      
+      <ResponseField name="interestRateMin" type="decimal">
+        Minimum annual interest rate (percentage)
+      </ResponseField>
+      
+      <ResponseField name="interestRateMax" type="decimal">
+        Maximum annual interest rate (percentage)
+      </ResponseField>
+      
+      <ResponseField name="maturityMin" type="integer">
+        Minimum loan maturity in schedule periods
+      </ResponseField>
+      
+      <ResponseField name="maturityMax" type="integer">
+        Maximum loan maturity in schedule periods
+      </ResponseField>
+      
+      <ResponseField name="gracePeriodMin" type="integer">
+        Minimum grace period in schedule periods
+      </ResponseField>
+      
+      <ResponseField name="gracePeriodMax" type="integer">
+        Maximum grace period in schedule periods
+      </ResponseField>
+      
+      <ResponseField name="scheduleBasedType" type="string">
+        Schedule calculation method: `DAYS`, `WEEKS`, `MONTHS`, `YEARS`
+      </ResponseField>
+      
+      <ResponseField name="fees" type="array">
+        Array of entry fees
+        
+        <Expandable title="EntryFeeDetailsDto">
+          <ResponseField name="id" type="integer">
+            Fee ID
+          </ResponseField>
+          
+          <ResponseField name="name" type="string">
+            Fee name
+          </ResponseField>
+          
+          <ResponseField name="rate" type="decimal">
+            Fee rate (percentage or fixed amount)
+          </ResponseField>
+          
+          <ResponseField name="isPercentage" type="boolean">
+            Whether fee is percentage-based
+          </ResponseField>
+        </Expandable>
+      </ResponseField>
+      
+      <ResponseField name="penalties" type="array">
+        Array of penalty configurations
+      </ResponseField>
+      
+      <ResponseField name="accounts" type="array">
+        Accounting rule configurations
+      </ResponseField>
+      
+      <ResponseField name="topUpAllow" type="boolean">
+        Whether top-up loans are allowed
+      </ResponseField>
+      
+      <ResponseField name="topUpMaxLimit" type="decimal">
+        Maximum top-up amount limit
+      </ResponseField>
+      
+      <ResponseField name="hasPayees" type="boolean">
+        Whether product supports payees
+      </ResponseField>
+      
+      <ResponseField name="availability" type="array">
+        Array of profile types that can access this product
+      </ResponseField>
+      
+      <ResponseField name="isReadOnly" type="boolean">
+        Whether product is read-only (system product)
+      </ResponseField>
+    </Expandable>
+  </ResponseField>
+  
+  <ResponseField name="totalElements" type="integer">
+    Total number of products
+  </ResponseField>
+  
+  <ResponseField name="totalPages" type="integer">
+    Total number of pages
+  </ResponseField>
+</Expandable>
+
+<CodeGroup>
+```json 200 Response
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Small Business Loan",
+      "code": "SBL-001",
+      "currency": {
+        "id": 1,
+        "name": "US Dollar",
+        "code": "USD"
+      },
+      "amountMin": 1000.00,
+      "amountMax": 50000.00,
+      "interestRateMin": 8.00,
+      "interestRateMax": 15.00,
+      "maturityMin": 6,
+      "maturityMax": 36,
+      "gracePeriodMin": 0,
+      "gracePeriodMax": 3,
+      "scheduleBasedType": "MONTHS",
+      "fees": [
+        {
+          "id": 1,
+          "name": "Processing Fee",
+          "rate": 2.50,
+          "isPercentage": true
+        }
+      ],
+      "penalties": [],
+      "accounts": [],
+      "topUpAllow": true,
+      "topUpMaxLimit": 10000.00,
+      "hasPayees": false,
+      "availability": ["COMPANY", "PERSON"],
+      "isReadOnly": false
+    }
+  ],
+  "totalElements": 15,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+</CodeGroup>
+
+---
+
+### Get Loan Product
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/loan-products/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loan-products/1',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN'
+    }
+  }
+);
+const product = await response.json();
+```
+</CodeGroup>
+
+```
+GET /api/loan-products/{id}
+```
+
+Retrieve detailed information about a specific loan product.
+
+#### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Loan product ID
+</ParamField>
+
+#### Response
+
+Returns a single `LoanProductDetailsDto` object with complete configuration details.
+
+<CodeGroup>
+```json 200 Response
+{
+  "id": 1,
+  "name": "Small Business Loan",
+  "code": "SBL-001",
+  "currency": {
+    "id": 1,
+    "name": "US Dollar",
+    "code": "USD"
+  },
+  "amountMin": 1000.00,
+  "amountMax": 50000.00,
+  "interestRateMin": 8.00,
+  "interestRateMax": 15.00,
+  "maturityMin": 6,
+  "maturityMax": 36,
+  "gracePeriodMin": 0,
+  "gracePeriodMax": 3,
+  "scheduleBasedType": "MONTHS",
+  "fees": [
+    {
+      "id": 1,
+      "name": "Processing Fee",
+      "rate": 2.50,
+      "isPercentage": true,
+      "minValue": 0,
+      "maxValue": null
+    },
+    {
+      "id": 2,
+      "name": "Documentation Fee",
+      "rate": 50.00,
+      "isPercentage": false,
+      "minValue": 50.00,
+      "maxValue": 50.00
+    }
+  ],
+  "penalties": [
+    {
+      "id": 1,
+      "name": "Late Payment Penalty",
+      "rate": 1.50,
+      "gracePeriod": 3
+    }
+  ],
+  "accounts": [
+    {
+      "accountRuleType": "PRINCIPAL",
+      "accountId": 100
+    },
+    {
+      "accountRuleType": "INTEREST",
+      "accountId": 101
+    }
+  ],
+  "topUpAllow": true,
+  "topUpMaxLimit": 10000.00,
+  "topUpMaxOlb": 5000.00,
+  "hasPayees": false,
+  "availability": ["COMPANY", "PERSON"],
+  "provisioning": [],
+  "earlyPartialRepaymentFeeType": "PERCENTAGE",
+  "earlyPartialRepaymentFeeValue": 1.00,
+  "earlyTotalRepaymentFeeType": "FIXED",
+  "earlyTotalRepaymentFeeValue": 100.00,
+  "isReadOnly": false
+}
+```
+
+```json 404 Not Found
+{
+  "timestamp": "2024-03-15T14:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Loan product not found (ID=999)",
+  "path": "/api/loan-products/999"
+}
+```
+</CodeGroup>
+
+---
+
+### Create Loan Product
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/loan-products" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Micro Business Loan",
+    "code": "MBL-001",
+    "currencyId": 1,
+    "amountMin": 500.00,
+    "amountMax": 10000.00,
+    "interestRateMin": 10.00,
+    "interestRateMax": 20.00,
+    "maturityMin": 3,
+    "maturityMax": 12,
+    "gracePeriodMin": 0,
+    "gracePeriodMax": 1,
+    "scheduleBasedType": "MONTHS",
+    "availability": ["PERSON"],
+    "hasPayees": false
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/loan-products',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Micro Business Loan',
+      code: 'MBL-001',
+      currencyId: 1,
+      amountMin: 500.00,
+      amountMax: 10000.00,
+      interestRateMin: 10.00,
+      interestRateMax: 20.00,
+      maturityMin: 3,
+      maturityMax: 12,
+      gracePeriodMin: 0,
+      gracePeriodMax: 1,
+      scheduleBasedType: 'MONTHS',
+      availability: ['PERSON'],
+      hasPayees: false
+    })
+  }
+);
+const request = await response.json();
+```
+</CodeGroup>
+
+```
+POST /api/loan-products
+```
+
+Create a new loan product. This operation creates a maker-checker request that must be approved before the product becomes active.
+
+**Permission Required**: `MAKER_FOR_LOAN_PRODUCT`
+
+#### Request Body
+
+<ParamField body="name" type="string" required>
+  Product name (must be unique)
+</ParamField>
+
+<ParamField body="code" type="string" required>
+  Product code for reference (must be unique)
+</ParamField>
+
+<ParamField body="currencyId" type="integer" required>
+  Currency ID for the product
+</ParamField>
+
+<ParamField body="amountMin" type="decimal" required>
+  Minimum loan amount
+</ParamField>
+
+<ParamField body="amountMax" type="decimal" required>
+  Maximum loan amount (must be >= amountMin)
+</ParamField>
+
+<ParamField body="interestRateMin" type="decimal" required>
+  Minimum annual interest rate (percentage)
+</ParamField>
+
+<ParamField body="interestRateMax" type="decimal" required>
+  Maximum annual interest rate (percentage, must be >= interestRateMin)
+</ParamField>
+
+<ParamField body="maturityMin" type="integer" required>
+  Minimum loan maturity in schedule periods
+</ParamField>
+
+<ParamField body="maturityMax" type="integer" required>
+  Maximum loan maturity in schedule periods (must be >= maturityMin)
+</ParamField>
+
+<ParamField body="gracePeriodMin" type="integer" required>
+  Minimum grace period in schedule periods
+</ParamField>
+
+<ParamField body="gracePeriodMax" type="integer" required>
+  Maximum grace period in schedule periods (must be >= gracePeriodMin)
+</ParamField>
+
+<ParamField body="scheduleBasedType" type="string" required>
+  Schedule calculation basis: `DAYS`, `WEEKS`, `MONTHS`, or `YEARS`
+</ParamField>
+
+<ParamField body="availability" type="array" required>
+  Array of profile types that can access this product: `PERSON`, `COMPANY`, `GROUP`
+</ParamField>
+
+<ParamField body="hasPayees" type="boolean" required>
+  Whether the product supports multiple payees
+</ParamField>
+
+<ParamField body="topUpAllow" type="boolean">
+  Whether top-up loans are allowed
+</ParamField>
+
+<ParamField body="topUpMaxLimit" type="decimal">
+  Maximum top-up amount (required if topUpAllow is true)
+</ParamField>
+
+<ParamField body="fees" type="array">
+  Array of entry fee configurations
+</ParamField>
+
+<ParamField body="penalties" type="array">
+  Array of penalty configurations
+</ParamField>
+
+<ParamField body="accounts" type="array">
+  Array of accounting rule mappings
+</ParamField>
+
+#### Response
+
+Returns a `RequestDto` containing the maker-checker request ID.
+
+<ResponseField name="id" type="integer">
+  Maker-checker request ID. This request must be approved by an authorized checker before the product is created.
+</ResponseField>
+
+<CodeGroup>
+```json 200 Response
+{
+  "id": 42
+}
+```
+</CodeGroup>
+
+---
+
+### Update Loan Product
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://your-instance.opencbs.com/api/loan-products/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Small Business Loan - Updated",
+    "code": "SBL-001",
+    "currencyId": 1,
+    "amountMin": 1000.00,
+    "amountMax": 75000.00,
+    "interestRateMin": 7.50,
+    "interestRateMax": 15.00,
+    "maturityMin": 6,
+    "maturityMax": 48,
+    "gracePeriodMin": 0,
+    "gracePeriodMax": 3,
+    "scheduleBasedType": "MONTHS",
+    "availability": ["COMPANY", "PERSON"],
+    "hasPayees": false
+  }'
+```
+</CodeGroup>
+
+```
+PUT /api/loan-products/{id}
+```
+
+Update an existing loan product. This operation creates a maker-checker request that must be approved before changes take effect.
+
+**Permission Required**: `MAKER_FOR_LOAN_PRODUCT`
+
+#### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Loan product ID to update
+</ParamField>
+
+#### Request Body
+
+Same as Create Loan Product. All fields are required except optional ones.
+
+#### Response
+
+Returns a `RequestDto` containing the maker-checker request ID.
+
+<CodeGroup>
+```json 200 Response
+{
+  "id": 43
+}
+```
+
+```json 404 Not Found
+{
+  "timestamp": "2024-03-15T14:30:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Loan product not found (ID=999)",
+  "path": "/api/loan-products/999"
+}
+```
+</CodeGroup>
+
+---
+
+### Lookup Loan Products
+
+```
+GET /api/loan-products/lookup
+```
+
+Search loan products with filtering options. Returns simplified product information for dropdowns and selection lists.
+
+#### Query Parameters
+
+<ParamField query="page" type="integer" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="integer" default="20">
+  Items per page
+</ParamField>
+
+<ParamField query="name" type="string">
+  Filter by product name (partial match)
+</ParamField>
+
+<ParamField query="code" type="string">
+  Filter by product code (partial match)
+</ParamField>
+
+#### Response
+
+Returns paginated `LoanProductLookupDto` objects with essential fields.
+
+<CodeGroup>
+```json 200 Response
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Small Business Loan",
+      "code": "SBL-001"
+    },
+    {
+      "id": 2,
+      "name": "Micro Business Loan",
+      "code": "MBL-001"
+    }
+  ],
+  "totalElements": 2,
+  "totalPages": 1
+}
+```
+</CodeGroup>
+
+---
+
+### Get Account Rules
+
+```
+GET /api/loan-products/account-rules
+```
+
+Retrieve all available account rule types for loan product configuration.
+
+#### Response
+
+Returns an array of account rule type enums.
+
+<CodeGroup>
+```json 200 Response
+[
+  "PRINCIPAL",
+  "INTEREST",
+  "INTEREST_ACCRUAL",
+  "PENALTY",
+  "EARLY_REPAYMENT_FE",
+  "ENTRY_FEE",
+  "LOAN_LOSS_RESERVE"
+]
+```
+</CodeGroup>
+
+---
+
+### Get Product History
+
+```
+GET /api/loan-products/{id}/history
+```
+
+Retrieve the complete audit history of changes made to a loan product.
+
+#### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Loan product ID
+</ParamField>
+
+#### Response
+
+Returns an array of `HistoryDto` objects representing all revisions.
+
+<Expandable title="Response Schema">
+  <ResponseField name="revisionId" type="integer">
+    Revision number
+  </ResponseField>
+  
+  <ResponseField name="revisionDate" type="datetime">
+    When the revision was created
+  </ResponseField>
+  
+  <ResponseField name="revisionType" type="string">
+    Type of change: `ADD`, `MOD`, `DEL`
+  </ResponseField>
+  
+  <ResponseField name="author" type="string">
+    Username who made the change
+  </ResponseField>
+  
+  <ResponseField name="changes" type="object">
+    Object containing the changed fields and their values
+  </ResponseField>
+</Expandable>
+
+<CodeGroup>
+```json 200 Response
+[
+  {
+    "revisionId": 1,
+    "revisionDate": "2024-01-15T10:00:00",
+    "revisionType": "ADD",
+    "author": "admin",
+    "changes": {
+      "name": "Small Business Loan",
+      "amountMax": 50000.00
+    }
+  },
+  {
+    "revisionId": 2,
+    "revisionDate": "2024-03-15T14:30:00",
+    "revisionType": "MOD",
+    "author": "loan_manager",
+    "changes": {
+      "amountMax": 75000.00
+    }
+  }
+]
+```
+</CodeGroup>
+
+---
+
+### Get Product History by Date
+
+```
+GET /api/loan-products/{id}/history/last_change?dateTime={dateTime}
+```
+
+Retrieve the product configuration as it existed at a specific point in time.
+
+#### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Loan product ID
+</ParamField>
+
+#### Query Parameters
+
+<ParamField query="dateTime" type="datetime" required>
+  ISO 8601 datetime to retrieve configuration for
+</ParamField>
+
+#### Response
+
+Returns a single `HistoryDto` object representing the product state at the specified time.
+
+## Best Practices
+
+### Product Configuration
+
+1. **Logical Ranges**: Ensure min/max ranges are logical and don't overlap inappropriately
+   - `amountMax >= amountMin`
+   - `interestRateMax >= interestRateMin`
+   - `maturityMax >= maturityMin`
+
+2. **Currency Consistency**: All monetary amounts must be in the product's configured currency
+
+3. **Accounting Rules**: Configure all required account rules before activating a product:
+   - `PRINCIPAL`
+   - `INTEREST`
+   - `INTEREST_ACCRUAL`
+   - `PENALTY`
+
+4. **Testing**: Test product configuration with sample loan applications before going live
+
+### Maker-Checker Workflow
+
+1. **Separation of Duties**: Ensure makers and checkers are different users
+2. **Request Review**: Checkers should carefully review all product changes before approval
+3. **Documentation**: Include comments in maker-checker requests explaining the reason for changes
+
+### Versioning
+
+1. **Audit Trail**: Use the history endpoints to maintain compliance and audit trails
+2. **Impact Analysis**: Before updating a product, check how many active loans/applications use it
+3. **Communication**: Notify loan officers of product changes that affect their portfolios

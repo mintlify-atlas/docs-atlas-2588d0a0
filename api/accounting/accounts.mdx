@@ -1,0 +1,827 @@
+---
+title: 'Chart of Accounts'
+description: 'Manage the chart of accounts, account hierarchy, and account configurations'
+---
+
+The Chart of Accounts API provides endpoints for managing your organization's account structure, including creating accounts, browsing the account hierarchy, and configuring account properties.
+
+## Account Hierarchy
+
+OpenCBS uses a hierarchical chart of accounts with four levels:
+
+- **CATEGORY** - Top-level account grouping (Level 1)
+- **GROUP** - Second-level grouping (Level 2)
+- **SUBGROUP** - Third-level grouping (Level 3)
+- **BALANCE** - Leaf accounts that hold actual balances (Level 4)
+
+Only BALANCE accounts can have transactions posted to them.
+
+## Get Root Accounts
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const rootAccounts = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root',
+    headers={'Authorization': 'Bearer YOUR_TOKEN'}
+)
+root_accounts = response.json()
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="id" type="number">
+  Unique account identifier
+</ResponseField>
+
+<ResponseField name="number" type="string">
+  Account number in the chart of accounts
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Account name
+</ResponseField>
+
+<ResponseField name="isDebit" type="boolean">
+  Whether this account has a normal debit balance
+</ResponseField>
+
+<ResponseField name="accountType" type="string">
+  Account type: `CATEGORY`, `GROUP`, `SUBGROUP`, or `BALANCE`
+</ResponseField>
+
+<ResponseField name="currency" type="object">
+  Currency information
+  <Expandable title="currency properties">
+    <ResponseField name="id" type="number">Currency ID</ResponseField>
+    <ResponseField name="name" type="string">Currency name</ResponseField>
+    <ResponseField name="code" type="string">ISO currency code</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="branch" type="object">
+  Branch information
+  <Expandable title="branch properties">
+    <ResponseField name="id" type="number">Branch ID</ResponseField>
+    <ResponseField name="name" type="string">Branch name</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="locked" type="boolean">
+  Whether the account is locked from transactions
+</ResponseField>
+
+<ResponseField name="allowedTransferFrom" type="boolean">
+  Whether transfers can originate from this account
+</ResponseField>
+
+<ResponseField name="allowedTransferTo" type="boolean">
+  Whether transfers can be received by this account
+</ResponseField>
+
+<ResponseField name="allowedCashDeposit" type="boolean">
+  Whether cash deposits are allowed
+</ResponseField>
+
+<ResponseField name="allowedCashWithdrawal" type="boolean">
+  Whether cash withdrawals are allowed
+</ResponseField>
+
+<ResponseField name="allowedManualTransaction" type="boolean">
+  Whether manual journal entries are allowed
+</ResponseField>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "number": "1000",
+    "name": "Assets",
+    "isDebit": true,
+    "accountType": "CATEGORY",
+    "currency": {
+      "id": 1,
+      "name": "US Dollar",
+      "code": "USD"
+    },
+    "branch": {
+      "id": 1,
+      "name": "Head Office"
+    },
+    "locked": false,
+    "allowedTransferFrom": false,
+    "allowedTransferTo": false,
+    "allowedCashDeposit": false,
+    "allowedCashWithdrawal": false,
+    "allowedManualTransaction": false,
+    "hasTransactions": false
+  },
+  {
+    "id": 2,
+    "number": "2000",
+    "name": "Liabilities",
+    "isDebit": false,
+    "accountType": "CATEGORY",
+    "currency": {
+      "id": 1,
+      "name": "US Dollar",
+      "code": "USD"
+    },
+    "branch": {
+      "id": 1,
+      "name": "Head Office"
+    },
+    "locked": false,
+    "allowedTransferFrom": false,
+    "allowedTransferTo": false,
+    "allowedCashDeposit": false,
+    "allowedCashWithdrawal": false,
+    "allowedManualTransaction": false,
+    "hasTransactions": false
+  }
+]
+```
+
+---
+
+## Get Account Leaves by Parent
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root/1/leaves?page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root/1/leaves?page=0&size=20',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const leaves = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="accountId" type="number" required>
+  Parent account ID to get leaves for
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="0">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Number of items per page
+</ParamField>
+
+### Response
+
+Returns a paginated list of child accounts with the same structure as root accounts.
+
+```json
+{
+  "content": [
+    {
+      "id": 10,
+      "number": "1010",
+      "name": "Cash",
+      "parentAccountNumber": "1000",
+      "isDebit": true,
+      "accountType": "GROUP",
+      "currency": {
+        "id": 1,
+        "name": "US Dollar",
+        "code": "USD"
+      },
+      "branch": {
+        "id": 1,
+        "name": "Head Office"
+      },
+      "locked": false,
+      "allowedTransferFrom": false,
+      "allowedTransferTo": false,
+      "allowedCashDeposit": false,
+      "allowedCashWithdrawal": false,
+      "allowedManualTransaction": false,
+      "hasTransactions": false
+    }
+  ],
+  "totalElements": 1,
+  "totalPages": 1,
+  "size": 20,
+  "number": 0
+}
+```
+
+---
+
+## Get Account Details
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/chart-of-accounts/123',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const account = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="accountId" type="number" required>
+  Account ID to retrieve
+</ParamField>
+
+### Response
+
+Returns detailed account information suitable for editing.
+
+```json
+{
+  "id": 123,
+  "number": "1010-001",
+  "name": "Cash on Hand - Main Branch",
+  "parentAccountNumber": "1010",
+  "isDebit": true,
+  "accountType": "BALANCE",
+  "currency": {
+    "id": 1,
+    "name": "US Dollar",
+    "code": "USD"
+  },
+  "branch": {
+    "id": 1,
+    "name": "Head Office"
+  },
+  "locked": false,
+  "allowedTransferFrom": true,
+  "allowedTransferTo": true,
+  "allowedCashDeposit": true,
+  "allowedCashWithdrawal": true,
+  "allowedManualTransaction": true,
+  "hasTransactions": true
+}
+```
+
+---
+
+## Create Account
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/chart-of-accounts" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "parentAccountId": 10,
+    "childNumber": "001",
+    "name": "Cash on Hand - Main Branch",
+    "currencyId": 1,
+    "branchId": 1,
+    "isDebit": true,
+    "locked": false,
+    "allowedTransferFrom": true,
+    "allowedTransferTo": true,
+    "allowedCashDeposit": true,
+    "allowedCashWithdrawal": true,
+    "allowedManualTransaction": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/chart-of-accounts',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      parentAccountId: 10,
+      childNumber: '001',
+      name: 'Cash on Hand - Main Branch',
+      currencyId: 1,
+      branchId: 1,
+      isDebit: true,
+      locked: false,
+      allowedTransferFrom: true,
+      allowedTransferTo: true,
+      allowedCashDeposit: true,
+      allowedCashWithdrawal: true,
+      allowedManualTransaction: true
+    })
+  }
+);
+const request = await response.json();
+```
+</CodeGroup>
+
+### Request Body
+
+<ParamField body="parentAccountId" type="number" required>
+  ID of the parent account in the hierarchy
+</ParamField>
+
+<ParamField body="childNumber" type="string" required>
+  Account number suffix (will be appended to parent number)
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Account name
+</ParamField>
+
+<ParamField body="currencyId" type="number" required>
+  Currency ID for this account
+</ParamField>
+
+<ParamField body="branchId" type="number" required>
+  Branch ID this account belongs to
+</ParamField>
+
+<ParamField body="isDebit" type="boolean" required>
+  Whether this account has a normal debit balance
+</ParamField>
+
+<ParamField body="locked" type="boolean" default="false">
+  Lock account from transactions
+</ParamField>
+
+<ParamField body="allowedTransferFrom" type="boolean" default="false">
+  Allow transfers from this account
+</ParamField>
+
+<ParamField body="allowedTransferTo" type="boolean" default="false">
+  Allow transfers to this account
+</ParamField>
+
+<ParamField body="allowedCashDeposit" type="boolean" default="false">
+  Allow cash deposits
+</ParamField>
+
+<ParamField body="allowedCashWithdrawal" type="boolean" default="false">
+  Allow cash withdrawals
+</ParamField>
+
+<ParamField body="allowedManualTransaction" type="boolean" default="false">
+  Allow manual journal entries
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="number">
+  Request ID for maker-checker approval workflow
+</ResponseField>
+
+```json
+{
+  "id": 456
+}
+```
+
+<Note>
+  Account creation requires maker-checker approval. The returned ID is the request ID, not the account ID. The account will be created after a checker approves the request.
+</Note>
+
+---
+
+## Update Account
+
+<CodeGroup>
+```bash cURL
+curl -X PUT "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/123" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cash on Hand - Updated Name",
+    "locked": false,
+    "allowedTransferFrom": true,
+    "allowedTransferTo": true,
+    "allowedCashDeposit": true,
+    "allowedCashWithdrawal": true,
+    "allowedManualTransaction": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/chart-of-accounts/123',
+  {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Cash on Hand - Updated Name',
+      locked: false,
+      allowedTransferFrom: true,
+      allowedTransferTo: true,
+      allowedCashDeposit: true,
+      allowedCashWithdrawal: true,
+      allowedManualTransaction: true
+    })
+  }
+);
+const request = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="accountId" type="number" required>
+  Account ID to update
+</ParamField>
+
+### Request Body
+
+Same structure as create request. Only modifiable fields can be updated.
+
+### Response
+
+```json
+{
+  "id": 457
+}
+```
+
+<Note>
+  Account updates require maker-checker approval. The account will be updated after a checker approves the request.
+</Note>
+
+---
+
+## Get Account Balance
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/get-account-balance/123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/get-account-balance/123',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+const balance = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="accountId" type="number" required>
+  Account ID to get balance for
+</ParamField>
+
+### Response
+
+Returns the current account balance as a decimal number.
+
+```json
+15750.50
+```
+
+---
+
+## Filter Root Accounts by Branch
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root/branch?branch=1" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="branch" type="number" required>
+  Branch ID to filter by
+</ParamField>
+
+### Response
+
+Returns root accounts filtered by branch.
+
+---
+
+## Filter Leaves by Branch
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/chart-of-accounts/root/1/leaves/branch?branch=1&page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="accountId" type="number" required>
+  Parent account ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="branch" type="number" required>
+  Branch ID to filter by
+</ParamField>
+
+<ParamField query="page" type="number" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Page size
+</ParamField>
+
+---
+
+## Search Accounts
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/lookup?search=cash&page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Search term to filter accounts
+</ParamField>
+
+<ParamField query="page" type="number" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Page size
+</ParamField>
+
+### Response
+
+Returns paginated search results.
+
+---
+
+## Get Current Accounts
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/lookup/current-accounts?search=member&page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="search" type="string">
+  Search term
+</ParamField>
+
+<ParamField query="page" type="number" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Page size
+</ParamField>
+
+### Response
+
+Returns paginated list of current accounts (customer/member accounts).
+
+---
+
+## Search Accounts by Tags
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/lookup/by-tags?page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '["LOAN_PRINCIPAL", "LOAN_INTEREST"]'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-instance.opencbs.com/api/accounting/lookup/by-tags?page=0&size=20',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(['LOAN_PRINCIPAL', 'LOAN_INTEREST'])
+  }
+);
+const accounts = await response.json();
+```
+</CodeGroup>
+
+### Request Body
+
+Array of account tag types to filter by.
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Page size
+</ParamField>
+
+---
+
+## Get Account Tags
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/tags" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Response
+
+Returns list of available account tag types.
+
+```json
+[
+  "LOAN_PRINCIPAL",
+  "LOAN_INTEREST",
+  "LOAN_PENALTY",
+  "SAVINGS_BALANCE",
+  "CASH",
+  "VAULT",
+  "TILL"
+]
+```
+
+---
+
+## Get Payee Accounts
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/payee?page=0&size=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="0">
+  Page number
+</ParamField>
+
+<ParamField query="size" type="number" default="20">
+  Page size
+</ParamField>
+
+### Response
+
+Returns accounts that can be used as payees in transactions.
+
+---
+
+## Recalculate Balances
+
+<CodeGroup>
+```bash cURL
+curl -X POST "https://your-instance.opencbs.com/api/accounting/recalculateBalances?fromDate=2024-01-01" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="fromDate" type="string" required>
+  Start date for balance recalculation (ISO 8601 date format: YYYY-MM-DD)
+</ParamField>
+
+### Response
+
+```json
+"Balance recalculation is finished"
+```
+
+<Warning>
+  This is an administrative operation that recalculates account balances from the specified date forward. Use with caution in production environments.
+</Warning>
+
+---
+
+## Get Account History
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/123/history" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="number" required>
+  Account ID
+</ParamField>
+
+### Response
+
+Returns audit history of account changes.
+
+```json
+[
+  {
+    "revisionId": 1,
+    "revisionDate": "2024-01-15T10:30:00",
+    "userName": "john.doe",
+    "action": "CREATE",
+    "fieldName": "name",
+    "oldValue": null,
+    "newValue": "Cash on Hand - Main Branch"
+  },
+  {
+    "revisionId": 2,
+    "revisionDate": "2024-02-20T14:15:00",
+    "userName": "jane.smith",
+    "action": "UPDATE",
+    "fieldName": "locked",
+    "oldValue": "false",
+    "newValue": "true"
+  }
+]
+```
+
+---
+
+## Get Last Account Change
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://your-instance.opencbs.com/api/accounting/123/history/last_change?dateTime=2024-02-20T14:15:00" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="id" type="number" required>
+  Account ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="dateTime" type="string" required>
+  ISO 8601 date-time to get revision for (format: YYYY-MM-DDTHH:mm:ss)
+</ParamField>
+
+### Response
+
+Returns the account revision closest to the specified date-time.

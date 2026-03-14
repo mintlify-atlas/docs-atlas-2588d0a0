@@ -1,0 +1,781 @@
+---
+title: Client Profiles
+description: Understanding the client profile system including individuals, groups, and companies
+---
+
+OpenCBS Cloud uses a flexible profile system to represent all types of clients in a microfinance institution. The system supports three distinct client types while maintaining a unified interface for common operations.
+
+## Profile Types
+
+<CardGroup cols={3}>
+  <Card title="Person" icon="user">
+    Individual clients with personal information
+  </Card>
+  <Card title="Group" icon="users">
+    Solidarity groups and lending circles
+  </Card>
+  <Card title="Company" icon="building">
+    Business entities and corporations
+  </Card>
+</CardGroup>
+
+## Profile Architecture
+
+### Single Table Inheritance
+
+OpenCBS implements profiles using **Single Table Inheritance (STI)**, a JPA inheritance strategy where all profile types share one database table with a discriminator column.
+
+```java
+package com.opencbs.core.domain.profiles;
+
+@Entity
+@Table(name = "profiles")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "[type]", discriminatorType = DiscriminatorType.STRING)
+public class Profile extends CreationInfoEntity implements NamedEntity {
+    
+    @Column(name = "[type]", nullable = false, insertable = false, updatable = false)
+    private String type;
+    
+    @Column(name = "[name]", nullable = false)
+    private String name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private EntityStatus status;
+    
+    @Column(name = "version")
+    private Integer version;
+    
+    @ManyToOne
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
+    
+    @ManyToMany
+    @JoinTable(name = "profiles_accounts",
+            joinColumns = @JoinColumn(name = "profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "account_id"))
+    private Set<Account> currentAccounts = new HashSet<>();
+    
+    public String getNameFromCustomFields() {
+        return null;  // Overridden by subclasses
+    }
+}
+```
+
+### Profile Type Enum
+
+```java
+package com.opencbs.core.domain.enums;
+
+public enum ProfileType {
+    PERSON(1),
+    COMPANY(2),
+    GROUP(4);
+    
+    private int id;
+    
+    ProfileType(int id) {
+        this.id = id;
+    }
+    
+    public int getId() {
+        return this.id;
+    }
+}
+```
+
+<Info>
+The discriminator column `[type]` stores values: "PERSON", "GROUP", or "COMPANY" to distinguish profile types in the database.
+</Info>
+
+## Common Profile Features
+
+All profile types share these core features:
+
+### Status Management
+
+Profiles can have different lifecycle statuses:
+
+```java
+public enum EntityStatus {
+    PENDING,   // Awaiting approval
+    LIVE,      // Active and approved
+    CLOSED,    // Archived/inactive
+    REJECTED   // Approval rejected
+}
+```
+
+The status field enables:
+- **Maker-Checker workflow**: Changes pending approval stay as PENDING
+- **Audit trail**: Track when profiles become active
+- **Archival**: Close profiles without deletion
+- **Access control**: Restrict operations based on status
+
+### Branch Association
+
+Every profile must be associated with a branch:
+
+```java
+@ManyToOne
+@JoinColumn(name = "branch_id", nullable = false)
+private Branch branch;
+```
+
+This enables:
+- **Multi-branch operations**: Each branch manages its own clients
+- **Branch-level reporting**: Filter clients by location
+- **Permission scoping**: Restrict user access by branch
+- **Performance tracking**: Compare branches by client portfolio
+
+### Account Relationships
+
+Profiles maintain references to associated accounts:
+
+```java
+@ManyToMany
+@JoinTable(name = "profiles_accounts",
+        joinColumns = @JoinColumn(name = "profile_id"),
+        inverseJoinColumns = @JoinColumn(name = "account_id"))
+private Set<Account> currentAccounts = new HashSet<>();
+```
+
+These accounts can include:
+- Loan accounts
+- Savings accounts
+- Term deposit accounts
+- Current accounts for transactions
+
+### Audit Trail
+
+All profiles inherit audit tracking from `CreationInfoEntity`:
+
+```java
+public abstract class CreationInfoEntity extends BaseEntity {
+    @ManyToOne
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+    
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @ManyToOne
+    @JoinColumn(name = "verified_by_id")
+    private User verifiedBy;
+    
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+}
+```
+
+The `@Audited` annotation enables complete change history via Hibernate Envers.
+
+## Person Profiles
+
+Individual clients with personal information and identification.
+
+### Entity Definition
+
+```java
+package com.opencbs.core.domain.profiles;
+
+@Entity
+@Audited
+@DiscriminatorValue("PERSON")
+public class Person extends Profile {
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<PersonCustomFieldValue> customFieldValues;
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.REFRESH})
+    private List<PersonAttachment> attachments;
+    
+    @Override
+    public String getNameFromCustomFields() {
+        String firstName = this.customFieldValues
+                .stream()
+                .filter(x -> x.getCustomField().getName().equals("first_name"))
+                .filter(i -> i.getStatus().equals(EntityStatus.LIVE))
+                .map(CustomFieldValue::getValue)
+                .findFirst()
+                .orElse("");
+        
+        String lastName = this.customFieldValues
+                .stream()
+                .filter(x -> x.getCustomField().getName().equals("last_name"))
+                .filter(i -> i.getStatus().equals(EntityStatus.LIVE))
+                .map(CustomFieldValue::getValue)
+                .findFirst()
+                .orElse("");
+        
+        return firstName + " " + lastName;
+    }
+}
+```
+
+### Custom Fields for Persons
+
+Person profiles use custom fields to store flexible personal information:
+
+**Common Person Fields:**
+- `first_name`: Given name
+- `last_name`: Family name
+- `middle_name`: Middle name or patronymic
+- `date_of_birth`: Birth date
+- `gender`: Male/Female/Other
+- `marital_status`: Single/Married/Divorced/Widowed
+- `national_id`: National identification number
+- `phone_number`: Primary contact number
+- `email`: Email address
+- `address`: Physical address
+- `city`: City of residence
+- `postal_code`: Postal/ZIP code
+- `country`: Country of residence
+- `occupation`: Current occupation
+- `employer`: Employer name
+- `monthly_income`: Income amount
+- `education_level`: Highest education completed
+
+<Note>
+Custom fields allow MFIs to tailor the system to local requirements without code changes. Fields are defined in the database and rendered dynamically in the UI.
+</Note>
+
+### Person Attachments
+
+Store documents related to the person:
+
+```java
+@OneToMany(mappedBy = "owner")
+private List<PersonAttachment> attachments;
+```
+
+Common attachments:
+- Photo ID / National ID card
+- Proof of address
+- Income verification
+- Business license (for entrepreneurs)
+- Bank statements
+- Tax documents
+
+### Use Cases
+
+**Individual Lending:**
+```java
+// Create a person profile
+Person person = new Person();
+person.setName("John Doe");
+person.setBranch(branch);
+person.setStatus(EntityStatus.PENDING);
+
+// Add custom field values
+PersonCustomFieldValue firstName = new PersonCustomFieldValue();
+firstName.setCustomField(firstNameField);
+firstName.setValue("John");
+firstName.setStatus(EntityStatus.LIVE);
+person.getCustomFieldValues().add(firstName);
+
+// Save profile
+personService.create(person);
+```
+
+## Group Profiles
+
+Solidarity groups, village banks, and other collective lending entities.
+
+### Entity Definition
+
+```java
+package com.opencbs.core.domain.profiles;
+
+@Entity
+@Audited
+@DiscriminatorValue("GROUP")
+public class Group extends Profile implements NamedEntity {
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<GroupCustomFieldValue> customFieldValues;
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.REFRESH})
+    private List<GroupAttachment> attachments;
+    
+    @OneToMany
+    @JoinColumn(name = "group_id")
+    private List<GroupMember> groupMembers;
+    
+    @Override
+    public String getNameFromCustomFields() {
+        return this.customFieldValues
+                .stream()
+                .filter(x -> x.getCustomField().getName().equals("name")
+                        && x.getStatus().equals(EntityStatus.LIVE))
+                .map(GroupCustomFieldValue::getValue)
+                .findFirst()
+                .orElse("");
+    }
+}
+```
+
+### Group Membership
+
+Groups maintain a list of member profiles:
+
+```java
+@OneToMany
+@JoinColumn(name = "group_id")
+private List<GroupMember> groupMembers;
+```
+
+**GroupMember entity:**
+```java
+@Entity
+@Table(name = "group_members")
+public class GroupMember extends BaseEntity {
+    
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private Group group;
+    
+    @ManyToOne
+    @JoinColumn(name = "person_id")
+    private Person person;
+    
+    @Column(name = "joined_date")
+    private LocalDate joinedDate;
+    
+    @Column(name = "left_date")
+    private LocalDate leftDate;
+    
+    @Column(name = "is_leader")
+    private Boolean isLeader;
+}
+```
+
+### Group Lending Models
+
+<Accordion title="Solidarity Group">
+Small groups (typically 5-10 members) who:
+- Guarantee each other's loans
+- Meet regularly to collect repayments
+- Provide peer support and pressure
+- Share liability for defaults
+
+Members are typically from the same community and know each other well.
+</Accordion>
+
+<Accordion title="Village Banking">
+Larger groups (20-50 members) that:
+- Pool savings into a common fund
+- Make loans to members from the pool
+- Manage their own credit decisions
+- Elect leadership committee
+
+The group operates as a mini-financial institution.
+</Accordion>
+
+<Accordion title="Self-Help Groups">
+Member-owned groups that:
+- Mobilize savings collectively
+- Access external financing as a group
+- Build social capital
+- Support member businesses
+
+Common in South Asian microfinance.
+</Accordion>
+
+### Custom Fields for Groups
+
+**Common Group Fields:**
+- `name`: Group name/identifier
+- `formation_date`: When group was formed
+- `meeting_frequency`: Weekly/Bi-weekly/Monthly
+- `meeting_day`: Day of week for meetings
+- `meeting_location`: Where group meets
+- `leadership_structure`: How leaders are chosen
+- `member_count`: Number of active members
+- `savings_balance`: Collective savings amount
+- `group_rules`: Internal bylaws/constitution
+
+### Use Cases
+
+**Group Loan Disbursement:**
+```java
+// Create group loan
+Loan groupLoan = new Loan();
+groupLoan.setProfile(group);  // Group is the borrower
+groupLoan.setAmount(new BigDecimal("10000"));
+groupLoan.setLoanProduct(groupLoanProduct);
+
+// Individual members may have sub-loans
+for (GroupMember member : group.getGroupMembers()) {
+    if (member.getLeftDate() == null) {  // Active members only
+        Loan memberLoan = createMemberLoan(member.getPerson(), groupLoan);
+    }
+}
+```
+
+## Company Profiles
+
+Business entities, cooperatives, and corporate clients.
+
+### Entity Definition
+
+```java
+package com.opencbs.core.domain.profiles;
+
+@Entity
+@Audited
+@DiscriminatorValue("COMPANY")
+public class Company extends Profile {
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<CompanyCustomFieldValue> customFieldValues;
+    
+    @OneToMany(mappedBy = "owner", cascade = {CascadeType.REFRESH})
+    private List<CompanyAttachment> attachments;
+    
+    @OneToMany
+    @JoinColumn(name = "company_id")
+    private List<CompanyMember> companyMembers;
+    
+    @Override
+    public String getNameFromCustomFields() {
+        return this.customFieldValues
+                .stream()
+                .filter(x -> x.getCustomField().getName().equals("name"))
+                .filter(i -> i.getStatus().equals(EntityStatus.LIVE))
+                .map(CompanyCustomFieldValue::getValue)
+                .findFirst()
+                .orElse("");
+    }
+}
+```
+
+### Company Members
+
+Companies track ownership and management:
+
+```java
+@OneToMany
+@JoinColumn(name = "company_id")
+private List<CompanyMember> companyMembers;
+```
+
+**CompanyMember entity:**
+```java
+@Entity
+@Table(name = "company_members")
+public class CompanyMember extends BaseEntity {
+    
+    @ManyToOne
+    @JoinColumn(name = "company_id")
+    private Company company;
+    
+    @ManyToOne
+    @JoinColumn(name = "person_id")
+    private Person person;
+    
+    @Column(name = "role")
+    private String role;  // Owner, Director, Manager, Shareholder
+    
+    @Column(name = "ownership_percentage")
+    private BigDecimal ownershipPercentage;
+    
+    @Column(name = "appointment_date")
+    private LocalDate appointmentDate;
+}
+```
+
+### Custom Fields for Companies
+
+**Common Company Fields:**
+- `name`: Legal business name
+- `registration_number`: Business registration ID
+- `tax_id`: Tax identification number
+- `incorporation_date`: Date of incorporation
+- `legal_form`: LLC/Corporation/Partnership/Sole Proprietorship
+- `industry`: Business sector/industry
+- `employee_count`: Number of employees
+- `annual_revenue`: Yearly revenue
+- `registered_address`: Legal address
+- `business_address`: Operating location
+- `phone`: Business phone
+- `email`: Business email
+- `website`: Company website
+- `bank_account`: Business bank account
+
+### Company Attachments
+
+Business documentation:
+- Certificate of incorporation
+- Tax registration
+- Business licenses
+- Financial statements
+- Audited accounts
+- Board resolutions
+- Shareholder agreements
+- Property deeds (if used as collateral)
+
+### Use Cases
+
+**SME Lending:**
+```java
+// Create company profile
+Company company = new Company();
+company.setName("ABC Trading Ltd");
+company.setBranch(branch);
+
+// Add company owners
+CompanyMember owner1 = new CompanyMember();
+owner1.setCompany(company);
+owner1.setPerson(person1);
+owner1.setRole("Director");
+owner1.setOwnershipPercentage(new BigDecimal("60"));
+company.getCompanyMembers().add(owner1);
+
+// Create business loan
+Loan businessLoan = new Loan();
+businessLoan.setProfile(company);
+businessLoan.setAmount(new BigDecimal("500000"));
+businessLoan.setLoanProduct(smeLoanProduct);
+```
+
+## Profile Services
+
+### Core Profile Service
+
+```java
+package com.opencbs.core.services;
+
+@Service
+public abstract class ProfileService<T extends Profile> {
+    
+    public abstract T create(T profile);
+    
+    public abstract T update(T profile);
+    
+    public Optional<T> findOne(Long id) {
+        return repository.findById(id);
+    }
+    
+    public Page<T> findAll(Pageable pageable) {
+        return repository.findAll(pageable);
+    }
+    
+    protected void updateCustomFields(T profile) {
+        profile.getCustomFieldValues().forEach(value -> {
+            value.setCreatedBy(UserHelper.getCurrentUser());
+            value.setCreatedAt(DateHelper.getLocalDateTimeNow());
+            value.setStatus(EntityStatus.LIVE);
+        });
+    }
+}
+```
+
+### Specific Profile Services
+
+```java
+// Person service
+@Service
+public class PersonService extends ProfileService<Person> {
+    private final PersonRepository personRepository;
+    
+    @Transactional
+    public Person create(Person person) {
+        updateCustomFields(person);
+        return personRepository.save(person);
+    }
+}
+
+// Group service
+@Service
+public class GroupService extends ProfileService<Group> {
+    private final GroupRepository groupRepository;
+    
+    @Transactional
+    public Group create(Group group) {
+        updateCustomFields(group);
+        validateGroupMembers(group);
+        return groupRepository.save(group);
+    }
+    
+    private void validateGroupMembers(Group group) {
+        if (group.getGroupMembers().isEmpty()) {
+            throw new ValidationException("Group must have at least one member");
+        }
+    }
+}
+
+// Company service
+@Service
+public class CompanyService extends ProfileService<Company> {
+    private final CompanyRepository companyRepository;
+    
+    @Transactional
+    public Company create(Company company) {
+        updateCustomFields(company);
+        return companyRepository.save(company);
+    }
+}
+```
+
+## Profile Relationships
+
+### Profile-to-Product Relationships
+
+Profiles can have multiple financial products:
+
+```java
+// One person with multiple products
+Person person = personService.findOne(1L);
+
+// Loan
+Loan loan = new Loan();
+loan.setProfile(person);
+loan.setLoanProduct(microLoanProduct);
+
+// Savings account
+Saving saving = new Saving();
+saving.setProfile(person);
+saving.setProduct(savingsProduct);
+
+// Term deposit
+TermDeposit deposit = new TermDeposit();
+deposit.setProfile(person);
+deposit.setProduct(termDepositProduct);
+```
+
+### Cross-Profile Relationships
+
+Profiles can reference each other:
+
+```java
+// Person is member of group
+GroupMember membership = new GroupMember();
+membership.setGroup(group);
+membership.setPerson(person);
+
+// Person is owner of company
+CompanyMember ownership = new CompanyMember();
+ownership.setCompany(company);
+ownership.setPerson(person);
+ownership.setRole("Director");
+
+// Person is guarantor for another person's loan
+Guarantor guarantor = new Guarantor();
+guarantor.setLoan(loan);
+guarantor.setProfile(guarantorPerson);
+```
+
+## Profile Search and Filtering
+
+### Search by Name
+
+```java
+@Repository
+public interface ProfileRepository extends JpaRepository<Profile, Long> {
+    
+    @Query("SELECT p FROM Profile p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Profile> searchByName(@Param("search") String search, Pageable pageable);
+}
+```
+
+### Filter by Type
+
+```java
+// Find all persons in a branch
+List<Person> persons = personRepository.findByBranchIdAndType(branchId, "PERSON");
+
+// Find all groups
+List<Group> groups = groupRepository.findAll();
+```
+
+### Filter by Status
+
+```java
+// Find active profiles
+List<Profile> activeProfiles = profileRepository.findByStatus(EntityStatus.LIVE);
+
+// Find pending approval
+List<Profile> pendingProfiles = profileRepository.findByStatus(EntityStatus.PENDING);
+```
+
+### Custom Field Search
+
+```java
+// Search by custom field value
+@Query("SELECT p FROM Person p JOIN p.customFieldValues v " +
+       "WHERE v.customField.name = :fieldName AND v.value = :value")
+List<Person> findByCustomField(
+    @Param("fieldName") String fieldName, 
+    @Param("value") String value
+);
+```
+
+## Frontend Profile Management
+
+### Angular Profile Module
+
+```typescript
+// Profile routing module
+@NgModule({
+  imports: [
+    RouterModule.forChild([
+      { path: 'people', component: PersonListComponent },
+      { path: 'people/:id', component: PersonDetailComponent },
+      { path: 'groups', component: GroupListComponent },
+      { path: 'groups/:id', component: GroupDetailComponent },
+      { path: 'companies', component: CompanyListComponent },
+      { path: 'companies/:id', component: CompanyDetailComponent }
+    ])
+  ]
+})
+export class ProfileRoutingModule { }
+```
+
+### Profile Service
+
+```typescript
+@Injectable()
+export class ProfileService {
+  private baseUrl = '/api/profiles';
+  
+  constructor(private http: HttpClient) {}
+  
+  getProfile(id: number): Observable<Profile> {
+    return this.http.get<Profile>(`${this.baseUrl}/${id}`);
+  }
+  
+  createPerson(person: Person): Observable<Person> {
+    return this.http.post<Person>(`${this.baseUrl}/people`, person);
+  }
+  
+  searchProfiles(search: string, type?: string): Observable<Profile[]> {
+    let params = new HttpParams().set('search', search);
+    if (type) {
+      params = params.set('type', type);
+    }
+    return this.http.get<Profile[]>(this.baseUrl, { params });
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Choose the Right Type" icon="circle-check">
+    Use Person for individuals, Group for collective lending, Company for registered businesses
+  </Card>
+  <Card title="Complete Custom Fields" icon="list-check">
+    Ensure all required custom fields are populated before approval
+  </Card>
+  <Card title="Maintain Relationships" icon="link">
+    Keep group membership and company ownership records up to date
+  </Card>
+  <Card title="Track Status Changes" icon="timeline">
+    Use the status field to manage approval workflows
+  </Card>
+</CardGroup>
+
+<Note>
+Profile data is audited automatically. Every change is tracked with user and timestamp, providing complete accountability.
+</Note>

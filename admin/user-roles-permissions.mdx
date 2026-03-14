@@ -1,0 +1,618 @@
+---
+title: 'User Roles & Permissions'
+description: 'Manage users, roles, and permission-based access control in OpenCBS Cloud'
+---
+
+## Overview
+
+OpenCBS Cloud implements a robust Role-Based Access Control (RBAC) system that manages user authentication, authorization, and permissions. The system is built on three core entities: Users, Roles, and Permissions, with a flexible maker-checker workflow for sensitive operations.
+
+## User Management
+
+### User Domain Model
+
+The `User` entity (`com.opencbs.core.domain.User`) implements Spring Security's `UserDetails` interface:
+
+```java
+@Entity
+@Table(name = "users")
+public class User extends BaseEntity implements UserDetails {
+    @Column(name = "username", nullable = false, unique = true)
+    private String username;
+    
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
+    
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+    
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+    
+    @Column(name = "time_zone_name", nullable = false)
+    private String timeZoneName = "Asia/Bishkek";
+    
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+    
+    @ManyToOne
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
+    
+    @Column(name = "email")
+    private String email;
+    
+    @Column(name = "phone_number")
+    private String phoneNumber;
+    
+    @Column(name = "id_number")
+    private String idNumber;
+    
+    @Column(name = "position")
+    private String position;
+    
+    @Column(name = "password_expire_date")
+    private LocalDate expireDate;
+    
+    @Column(name = "first_login")
+    private Boolean firstLogin;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private StatusType statusType = StatusType.ACTIVE;
+}
+```
+
+### User Properties
+
+<CardGroup cols={2}>
+  <Card title="Identity" icon="id-card">
+    - **Username** - Unique login identifier
+    - **First Name** - User's given name
+    - **Last Name** - User's family name
+    - **ID Number** - National ID or employee ID
+  </Card>
+
+  <Card title="Contact Information" icon="envelope">
+    - **Email** - User's email address
+    - **Phone Number** - Contact phone
+    - **Address** - Physical address
+    - **Position** - Job title or role description
+  </Card>
+
+  <Card title="Security" icon="lock">
+    - **Password Hash** - Encrypted password
+    - **Expire Date** - Password expiration date
+    - **First Login** - Requires password change
+    - **Status** - ACTIVE or INACTIVE
+  </Card>
+
+  <Card title="Organization" icon="building">
+    - **Branch** - Assigned branch location
+    - **Role** - Security role assignment
+    - **Time Zone** - User's timezone
+    - **System User** - Flag for system accounts
+  </Card>
+</CardGroup>
+
+### Creating Users
+
+User creation follows the maker-checker workflow pattern:
+
+<Steps>
+  <Step title="Submit User Creation Request">
+    ```bash
+    POST /api/users
+    ```
+    
+    Request body:
+    ```json
+    {
+      "username": "jsmith",
+      "firstName": "John",
+      "lastName": "Smith",
+      "email": "jsmith@example.com",
+      "phoneNumber": "+1234567890",
+      "position": "Loan Officer",
+      "branchId": 1,
+      "roleId": 5,
+      "password": "SecurePass123!"
+    }
+    ```
+    
+    **Required Permission:** `MAKER_FOR_USER`
+  </Step>
+
+  <Step title="Request Validation">
+    The `UserDtoValidator` validates:
+    - Username uniqueness
+    - Password strength requirements
+    - Required fields presence
+    - Valid role and branch references
+  </Step>
+
+  <Step title="Maker-Checker Approval">
+    The request is created with type `USER_CREATE` and awaits checker approval.
+    
+    **Required Permission (Checker):** `CHECKER_FOR_USER`
+  </Step>
+
+  <Step title="User Activation">
+    Once approved, the user is created with:
+    - Encrypted password hash
+    - `firstLogin` flag set to `true`
+    - Status set to `ACTIVE`
+    - Initial session created
+  </Step>
+</Steps>
+
+<Note>
+  Users with the special roles `TELLER` or `HEAD_TELLER` have additional permissions for cash management operations.
+</Note>
+
+### Updating Users
+
+```bash
+PUT /api/users/{id}
+```
+
+<Warning>
+  The system user (ID=1) cannot be modified through the API for security reasons.
+</Warning>
+
+Update operations also follow the maker-checker workflow:
+
+```java
+@PermissionRequired(name = "MAKER_FOR_USER", moduleType = ModuleType.MAKER_CHECKER)
+@PutMapping(value = "/{id}")
+public RequestDto put(@PathVariable long id, @RequestBody UserDto userDto) {
+    // Validation and maker-checker request creation
+    Request request = this.makerCheckerWorker.create(RequestType.USER_EDIT, userDto);
+    return new RequestDto(request.getId());
+}
+```
+
+### Password Management
+
+Update user password independently:
+
+```bash
+PUT /api/users/update-password
+```
+
+Request body:
+```json
+{
+  "userId": 5,
+  "oldPassword": "OldPass123!",
+  "newPassword": "NewPass456!",
+  "confirmPassword": "NewPass456!"
+}
+```
+
+Password policies are enforced via System Settings:
+- Minimum length
+- Uppercase requirement
+- Number requirement
+- Expiration period
+
+### Querying Users
+
+<AccordionGroup>
+  <Accordion title="Get All Users">
+    ```bash
+    GET /api/users?show_all=false
+    ```
+    
+    - `show_all=false` - Returns only active users
+    - `show_all=true` - Returns all users including inactive
+  </Accordion>
+
+  <Accordion title="Get Current User">
+    ```bash
+    GET /api/users/current
+    ```
+    
+    Returns the authenticated user's details from the security context.
+  </Accordion>
+
+  <Accordion title="Get User by ID">
+    ```bash
+    GET /api/users/{id}
+    ```
+    
+    Returns detailed user information including role and permissions.
+  </Accordion>
+
+  <Accordion title="Search Users (Lookup)">
+    ```bash
+    GET /api/users/lookup?search=john&branchId=1&show_all=false
+    ```
+    
+    Paginated search with filters:
+    - `search` - Text search in name fields
+    - `branchId` - Filter by branch
+    - `show_all` - Include inactive users
+  </Accordion>
+
+  <Accordion title="Get Tellers">
+    ```bash
+    GET /api/users/tellers?search=john
+    ```
+    
+    Returns users with TELLER or HEAD_TELLER roles.
+  </Accordion>
+</AccordionGroup>
+
+### User Audit History
+
+Track all changes to user records:
+
+```bash
+GET /api/users/{id}/history
+```
+
+Get user state at specific time:
+```bash
+GET /api/users/{id}/history/last_change?dateTime=2024-01-15T10:30:00
+```
+
+## Roles
+
+### Role Domain Model
+
+The `Role` entity (`com.opencbs.core.domain.Role`) defines groups of permissions:
+
+```java
+@Entity
+@Table(name = "roles")
+public class Role extends BaseEntity {
+    @Column(name = "name", nullable = false, unique = true)
+    private String name;
+    
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "roles_permissions",
+        joinColumns = @JoinColumn(name = "role_id"),
+        inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    private Set<Permission> permissions;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private StatusType statusType = StatusType.ACTIVE;
+    
+    @Column(name = "is_system", nullable = false)
+    private Boolean isSystem = Boolean.FALSE;
+}
+```
+
+### Role Characteristics
+
+- **Name:** Unique identifier for the role
+- **Permissions:** Set of granted permissions
+- **Status:** ACTIVE or INACTIVE
+- **System Flag:** System roles cannot be deleted
+
+### Managing Roles
+
+<Steps>
+  <Step title="Create Role">
+    ```bash
+    POST /api/roles
+    ```
+    
+    ```json
+    {
+      "name": "Branch Manager",
+      "permissionIds": [1, 5, 10, 15, 20]
+    }
+    ```
+    
+    **Required Permission:** `MAKER_FOR_ROLE`
+  </Step>
+
+  <Step title="Update Role">
+    ```bash
+    PUT /api/roles/{id}
+    ```
+    
+    Modify role name or permissions. Changes follow maker-checker workflow.
+  </Step>
+
+  <Step title="List Roles">
+    ```bash
+    GET /api/roles?show_all=false
+    ```
+    
+    Returns active roles by default.
+  </Step>
+
+  <Step title="Get Role Details">
+    ```bash
+    GET /api/roles/{id}
+    ```
+    
+    Returns role with full permission list.
+  </Step>
+</Steps>
+
+<Warning>
+  System roles (where `isSystem = true`) have special protections and cannot be deleted. They are essential for core system operations.
+</Warning>
+
+## Permissions
+
+### Permission Domain Model
+
+The `Permission` entity (`com.opencbs.core.domain.Permission`) defines granular access rights:
+
+```java
+@Entity
+@Table(name = "permissions")
+public class Permission extends BaseEntity {
+    @Column(name = "name", nullable = false)
+    private String name;
+    
+    @Column(name = "description", nullable = false)
+    private String description;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "module_type", nullable = false)
+    private ModuleType moduleType;
+    
+    @Column(name = "permanent", nullable = false)
+    private Boolean permanent;
+}
+```
+
+### Permission Properties
+
+- **Name:** Permission identifier (e.g., "CREATE_LOAN", "APPROVE_LOAN")
+- **Description:** Human-readable explanation
+- **Module Type:** Associated module (LOANS, SAVINGS, etc.)
+- **Permanent:** Cannot be deleted if true
+
+### Module Types
+
+Permissions are organized by module:
+
+```java
+public enum ModuleType {
+    AUDIT_TRAIL,        // Audit log access
+    PROFILES,           // Client profile management
+    LOAN_APPLICATIONS,  // Loan application processing
+    LOANS,              // Loan account management
+    GENERAL_LEDGER,     // GL operations
+    CHART_OF_ACCOUNTS,  // Chart of accounts
+    REPORTS,            // Report generation
+    CONFIGURATIONS,     // System configuration
+    DAY_CLOSURE,        // Day closure operations
+    TELLER_MANAGEMENT,  // Till and vault operations
+    SAVINGS,            // Savings account management
+    MAKER_CHECKER,      // Maker-checker workflow
+    SETTINGS            // System settings
+}
+```
+
+### Common Permissions
+
+<CardGroup cols={2}>
+  <Card title="Maker-Checker Permissions" icon="check-double">
+    - `MAKER_FOR_USER` - Create user requests
+    - `CHECKER_FOR_USER` - Approve user requests
+    - `MAKER_FOR_ROLE` - Create role requests
+    - `CHECKER_FOR_ROLE` - Approve role requests
+    - `MAKER_FOR_LOAN` - Create loan requests
+    - `CHECKER_FOR_LOAN` - Approve loan requests
+  </Card>
+
+  <Card title="Day Closure" icon="calendar">
+    - `DAY_CLOSURE` - Execute day closure process
+    - Module: `DAY_CLOSURE`
+  </Card>
+
+  <Card title="Profile Management" icon="users">
+    - `CREATE_PROFILE` - Create client profiles
+    - `EDIT_PROFILE` - Modify client data
+    - `VIEW_PROFILE` - Read client information
+    - `DELETE_PROFILE` - Remove profiles
+  </Card>
+
+  <Card title="Loan Operations" icon="money-bill">
+    - `CREATE_LOAN` - Initiate loan applications
+    - `APPROVE_LOAN` - Approve loans
+    - `DISBURSE_LOAN` - Disburse loan funds
+    - `REPAY_LOAN` - Process repayments
+  </Card>
+</CardGroup>
+
+### Querying Permissions
+
+```bash
+GET /api/permissions
+```
+
+Returns all available permissions grouped by module type.
+
+## Permission Enforcement
+
+### Annotation-Based Security
+
+The `@PermissionRequired` annotation enforces permissions at the controller level:
+
+```java
+@PermissionRequired(
+    name = "DAY_CLOSURE",
+    moduleType = ModuleType.DAY_CLOSURE,
+    description = "Day Closure activates mechanism that calculates interest, penalty, analytics and performs autorepayments."
+)
+@PostMapping
+public Map<String, Object> startDayClosure(@RequestParam("date") LocalDateTime date) {
+    // Method implementation
+}
+```
+
+### Programmatic Permission Checks
+
+Check permissions in code:
+
+```java
+User currentUser = UserHelper.getCurrentUser();
+
+if (currentUser.hasPermission("CREATE_LOAN")) {
+    // User has permission to create loans
+}
+```
+
+The `hasPermission` method is implemented in the User domain:
+
+```java
+public boolean hasPermission(String permission) {
+    return getRole()
+        .getPermissions()
+        .stream()
+        .anyMatch(x -> x.getName().equals(permission));
+}
+```
+
+## Maker-Checker Workflow
+
+Sensitive operations require dual authorization:
+
+<Steps>
+  <Step title="Maker Creates Request">
+    A user with `MAKER_FOR_*` permission creates a request:
+    - User creation
+    - Role modification
+    - Loan approval
+    - Profile changes
+  </Step>
+
+  <Step title="Request Stored">
+    The request is stored with:
+    - Request type
+    - Payload data
+    - Maker user
+    - Timestamp
+    - Status: PENDING
+  </Step>
+
+  <Step title="Checker Reviews">
+    A user with `CHECKER_FOR_*` permission:
+    - Reviews the request details
+    - Validates the changes
+    - Approves or rejects
+  </Step>
+
+  <Step title="Execution">
+    If approved:
+    - Request status: APPROVED
+    - Action executed
+    - Audit log created
+    
+    If rejected:
+    - Request status: REJECTED
+    - Reason documented
+    - Maker notified
+  </Step>
+</Steps>
+
+<Note>
+  The maker-checker workflow is implemented by `MakerCheckerWorker` in `com.opencbs.core.request.serivce`.
+</Note>
+
+## User Sessions
+
+User sessions are tracked via the `UserSession` entity:
+
+```java
+@Entity
+@Table(name = "user_sessions")
+public class UserSession extends BaseEntity {
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+    
+    @Column(name = "token")
+    private String token;
+    
+    @Column(name = "last_activity")
+    private LocalDateTime lastActivity;
+    
+    @Column(name = "is_active")
+    private Boolean isActive;
+}
+```
+
+### Session Management
+
+- Sessions expire based on `EXPIRATION_SESSION_TIME_IN_MINUTES` system setting
+- The `UserSessionHandler` manages session lifecycle
+- Sessions are validated on each authenticated request
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Role Design" icon="sitemap">
+    - Create roles based on job functions
+    - Use principle of least privilege
+    - Group related permissions logically
+    - Document role purposes
+  </Card>
+
+  <Card title="User Management" icon="user-shield">
+    - Enforce strong password policies
+    - Regular password rotation
+    - Deactivate users promptly when leaving
+    - Audit user activities regularly
+  </Card>
+
+  <Card title="Permission Assignment" icon="key">
+    - Grant permissions through roles, not directly
+    - Regular permission audits
+    - Test permission changes in staging
+    - Document custom permissions
+  </Card>
+
+  <Card title="Security" icon="shield-halved">
+    - Enable maker-checker for critical operations
+    - Monitor failed login attempts
+    - Review and approve pending requests promptly
+    - Maintain audit trails
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="User Cannot Login">
+    **Check:**
+    - User status is ACTIVE
+    - Password hasn't expired
+    - Account isn't locked
+    - Username is correct (case-sensitive)
+    - Branch assignment is valid
+  </Accordion>
+
+  <Accordion title="Permission Denied Errors">
+    **Check:**
+    - User's role has required permission
+    - Permission is in correct module
+    - Role status is ACTIVE
+    - Cache has been cleared after permission changes
+  </Accordion>
+
+  <Accordion title="Maker-Checker Request Stuck">
+    **Check:**
+    - Checker user has appropriate permission
+    - Request hasn't expired
+    - No validation errors in request
+    - System logs for errors
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+- [System Configuration](/admin/configuration)
+- [Day Closure Process](/admin/day-closure)
+- [Custom Fields](/admin/custom-fields)

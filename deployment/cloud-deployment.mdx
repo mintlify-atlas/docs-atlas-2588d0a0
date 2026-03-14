@@ -1,0 +1,674 @@
+---
+title: Cloud Deployment
+description: Deploy OpenCBS Cloud to AWS, Azure, Google Cloud, and other cloud platforms
+---
+
+This guide covers deploying OpenCBS Cloud to various cloud platforms using Docker containers, managed services, and infrastructure as code.
+
+## Deployment Architecture
+
+OpenCBS Cloud can be deployed in several configurations:
+
+### Single-Server Deployment
+
+Ideal for small institutions or testing:
+
+```
+┌─────────────────────────────┐
+│   Application Server        │
+│  ┌──────────────────────┐   │
+│  │ OpenCBS JAR          │   │
+│  │ (Backend + Frontend) │   │
+│  └──────────────────────┘   │
+│  ┌──────────────────────┐   │
+│  │ PostgreSQL           │   │
+│  └──────────────────────┘   │
+└─────────────────────────────┘
+```
+
+### Multi-Tier Deployment
+
+Recommended for production:
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌──────────────┐
+│ Load        │────▶│ Application     │────▶│ PostgreSQL   │
+│ Balancer    │     │ Servers (2+)    │     │ (RDS/Managed)│
+└─────────────┘     └─────────────────┘     └──────────────┘
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │ RabbitMQ     │
+                    │ (Optional)   │
+                    └──────────────┘
+```
+
+## Docker Deployment
+
+### Building Docker Images
+
+OpenCBS Cloud includes Dockerfiles for both backend and frontend.
+
+<Steps>
+  <Step title="Build the application">
+    First, build the JAR and frontend:
+
+    ```bash
+    # Build backend
+    ./build.sh -build 1.0.0 -instance production
+    
+    # Build frontend
+    cd client
+    yarn build-prod
+    cd ..
+    ```
+  </Step>
+
+  <Step title="Build Docker images">
+    <CodeGroup>
+    ```bash Backend Image
+    cd server/opencbs-server
+    docker build -t opencbs-server:1.0.0 .
+    ```
+
+    ```bash Frontend Image (if serving separately)
+    cd client
+    docker build -t opencbs-client:1.0.0 .
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Test locally">
+    ```bash
+    # Run PostgreSQL
+    docker run -d \
+      --name opencbs-postgres \
+      -e POSTGRES_DB=opencbs_db \
+      -e POSTGRES_USER=opencbs_user \
+      -e POSTGRES_PASSWORD=secure_password \
+      -p 5432:5432 \
+      postgres:12
+    
+    # Run OpenCBS
+    docker run -d \
+      --name opencbs-server \
+      --link opencbs-postgres:postgres \
+      -p 8080:8080 \
+      -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/opencbs_db \
+      -e SPRING_DATASOURCE_USERNAME=opencbs_user \
+      -e SPRING_DATASOURCE_PASSWORD=secure_password \
+      opencbs-server:1.0.0
+    ```
+  </Step>
+</Steps>
+
+### Docker Compose
+
+Create `docker-compose.yml` for full stack deployment:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:12-alpine
+    container_name: opencbs-postgres
+    environment:
+      POSTGRES_DB: opencbs_db
+      POSTGRES_USER: opencbs_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - opencbs-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: opencbs-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: opencbs
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - opencbs-network
+    restart: unless-stopped
+
+  opencbs:
+    image: opencbs-server:1.0.0
+    container_name: opencbs-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/opencbs_db
+      SPRING_DATASOURCE_USERNAME: opencbs_user
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: opencbs
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JAVA_OPTS: -Xms2g -Xmx4g
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "8080:8080"
+    networks:
+      - opencbs-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: opencbs-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - opencbs
+    networks:
+      - opencbs-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  opencbs-network:
+    driver: bridge
+```
+
+Deploy with:
+
+```bash
+# Create .env file
+cat > .env << EOF
+DB_PASSWORD=your_secure_db_password
+RABBITMQ_PASSWORD=your_secure_rabbitmq_password
+EOF
+
+# Start services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f opencbs
+```
+
+## AWS Deployment
+
+### AWS Elastic Beanstalk
+
+Deploy OpenCBS as a Java application:
+
+<Steps>
+  <Step title="Install EB CLI">
+    ```bash
+    pip install awsebcli --upgrade --user
+    eb --version
+    ```
+  </Step>
+
+  <Step title="Initialize Elastic Beanstalk">
+    ```bash
+    cd server/opencbs-server
+    eb init -p java-8 opencbs-cloud --region us-east-1
+    ```
+  </Step>
+
+  <Step title="Create environment">
+    ```bash
+    eb create opencbs-prod \
+      --instance-type t3.medium \
+      --database.engine postgres \
+      --database.version 12.5 \
+      --envvars SPRING_PROFILES_ACTIVE=prod
+    ```
+  </Step>
+
+  <Step title="Deploy application">
+    ```bash
+    # Build JAR
+    mvn clean package
+    
+    # Deploy
+    eb deploy
+    
+    # Open in browser
+    eb open
+    ```
+  </Step>
+</Steps>
+
+### AWS ECS (Elastic Container Service)
+
+Deploy using Docker containers:
+
+<CodeGroup>
+```bash Create ECR Repositories
+# Create repositories
+aws ecr create-repository --repository-name opencbs-server
+
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin \
+  123456789012.dkr.ecr.us-east-1.amazonaws.com
+
+# Tag and push image
+docker tag opencbs-server:1.0.0 \
+  123456789012.dkr.ecr.us-east-1.amazonaws.com/opencbs-server:1.0.0
+docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/opencbs-server:1.0.0
+```
+
+```json Task Definition
+{
+  "family": "opencbs-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "containerDefinitions": [
+    {
+      "name": "opencbs-server",
+      "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/opencbs-server:1.0.0",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "value": "jdbc:postgresql://opencbs-db.xxxxx.us-east-1.rds.amazonaws.com:5432/opencbs_db"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:opencbs/db-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/opencbs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+```
+</CodeGroup>
+
+### AWS RDS for PostgreSQL
+
+Use managed PostgreSQL database:
+
+```bash
+# Create RDS instance
+aws rds create-db-instance \
+  --db-instance-identifier opencbs-db \
+  --db-instance-class db.t3.medium \
+  --engine postgres \
+  --engine-version 12.5 \
+  --master-username opencbs_admin \
+  --master-user-password YourSecurePassword \
+  --allocated-storage 100 \
+  --storage-type gp2 \
+  --vpc-security-group-ids sg-xxxxx \
+  --db-subnet-group-name opencbs-subnet-group \
+  --backup-retention-period 7 \
+  --preferred-backup-window "03:00-04:00" \
+  --preferred-maintenance-window "mon:04:00-mon:05:00" \
+  --multi-az \
+  --storage-encrypted
+```
+
+## Azure Deployment
+
+### Azure App Service
+
+<Steps>
+  <Step title="Install Azure CLI">
+    ```bash
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    az login
+    ```
+  </Step>
+
+  <Step title="Create resource group">
+    ```bash
+    az group create --name opencbs-rg --location eastus
+    ```
+  </Step>
+
+  <Step title="Create App Service plan">
+    ```bash
+    az appservice plan create \
+      --name opencbs-plan \
+      --resource-group opencbs-rg \
+      --sku P1V2 \
+      --is-linux
+    ```
+  </Step>
+
+  <Step title="Create web app">
+    ```bash
+    az webapp create \
+      --resource-group opencbs-rg \
+      --plan opencbs-plan \
+      --name opencbs-app \
+      --runtime "JAVA|8-jre8"
+    ```
+  </Step>
+
+  <Step title="Deploy JAR">
+    ```bash
+    az webapp deployment source config-zip \
+      --resource-group opencbs-rg \
+      --name opencbs-app \
+      --src target/opencbs-server-1.0.0.jar
+    ```
+  </Step>
+</Steps>
+
+### Azure Database for PostgreSQL
+
+```bash
+az postgres server create \
+  --resource-group opencbs-rg \
+  --name opencbs-postgres \
+  --location eastus \
+  --admin-user opencbs_admin \
+  --admin-password YourSecurePassword \
+  --sku-name GP_Gen5_2 \
+  --version 12 \
+  --storage-size 102400 \
+  --backup-retention 7 \
+  --geo-redundant-backup Enabled
+
+# Create database
+az postgres db create \
+  --resource-group opencbs-rg \
+  --server-name opencbs-postgres \
+  --name opencbs_db
+```
+
+## Google Cloud Platform
+
+### Google Cloud Run
+
+Serverless container deployment:
+
+```bash
+# Enable APIs
+gcloud services enable run.googleapis.com
+gcloud services enable containerregistry.googleapis.com
+
+# Build and push to GCR
+gcloud builds submit --tag gcr.io/PROJECT_ID/opencbs-server:1.0.0
+
+# Deploy to Cloud Run
+gcloud run deploy opencbs-server \
+  --image gcr.io/PROJECT_ID/opencbs-server:1.0.0 \
+  --platform managed \
+  --region us-central1 \
+  --memory 4Gi \
+  --cpu 2 \
+  --set-env-vars SPRING_DATASOURCE_URL=jdbc:postgresql://CLOUD_SQL_CONNECTION/opencbs_db \
+  --add-cloudsql-instances PROJECT_ID:us-central1:opencbs-db \
+  --allow-unauthenticated
+```
+
+### Google Cloud SQL
+
+```bash
+gcloud sql instances create opencbs-db \
+  --database-version=POSTGRES_12 \
+  --tier=db-custom-2-7680 \
+  --region=us-central1 \
+  --backup \
+  --backup-start-time=03:00 \
+  --maintenance-window-day=SUN \
+  --maintenance-window-hour=4
+
+# Create database
+gcloud sql databases create opencbs_db --instance=opencbs-db
+
+# Create user
+gcloud sql users create opencbs_user \
+  --instance=opencbs-db \
+  --password=YourSecurePassword
+```
+
+## Environment Configuration
+
+### Production Application Properties
+
+Create `application-prod.properties`:
+
+```properties
+# Server Configuration
+server.port=8080
+server.compression.enabled=true
+server.compression.mime-types=text/html,text/xml,text/plain,text/css,application/javascript,application/json
+
+# Database
+spring.datasource.url=${DATABASE_URL}
+spring.datasource.username=${DATABASE_USERNAME}
+spring.datasource.password=${DATABASE_PASSWORD}
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+
+# JPA/Hibernate
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQL9Dialect
+
+# Flyway
+flyway.enabled=true
+flyway.baseline-on-migrate=true
+flyway.validate-on-migrate=true
+
+# Logging
+logging.level.root=INFO
+logging.level.com.opencbs=INFO
+logging.file.name=/var/log/opencbs/application.log
+logging.file.max-size=100MB
+logging.file.max-history=30
+
+# Security
+jwt.secret=${JWT_SECRET}
+jwt.expiration=86400000
+
+# Email
+spring.mail.host=${SMTP_HOST}
+spring.mail.port=${SMTP_PORT}
+spring.mail.username=${SMTP_USERNAME}
+spring.mail.password=${SMTP_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# RabbitMQ (if used)
+spring.rabbitmq.host=${RABBITMQ_HOST}
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=${RABBITMQ_USERNAME}
+spring.rabbitmq.password=${RABBITMQ_PASSWORD}
+```
+
+### Environment Variables
+
+Set platform-specific environment variables:
+
+<CodeGroup>
+```bash Docker
+-e SPRING_PROFILES_ACTIVE=prod
+-e DATABASE_URL=jdbc:postgresql://host:5432/opencbs_db
+-e DATABASE_USERNAME=opencbs_user
+-e DATABASE_PASSWORD=secure_password
+-e JWT_SECRET=your_jwt_secret_key_min_256_bits
+```
+
+```bash AWS Elastic Beanstalk
+eb setenv \
+  SPRING_PROFILES_ACTIVE=prod \
+  DATABASE_URL=jdbc:postgresql://xxx.rds.amazonaws.com:5432/opencbs_db \
+  DATABASE_USERNAME=opencbs_user \
+  DATABASE_PASSWORD=secure_password
+```
+
+```bash Heroku
+heroku config:set SPRING_PROFILES_ACTIVE=prod
+heroku config:set DATABASE_URL=postgres://...
+heroku config:set JWT_SECRET=your_secret_key
+```
+</CodeGroup>
+
+## SSL/TLS Configuration
+
+### Nginx Reverse Proxy
+
+Create `nginx.conf` for HTTPS termination:
+
+```nginx
+upstream opencbs_backend {
+    server opencbs:8080;
+}
+
+server {
+    listen 80;
+    server_name opencbs.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name opencbs.example.com;
+
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://opencbs_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        proxy_pass http://opencbs_backend/api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+## Monitoring and Logging
+
+### Application Metrics
+
+Enable Spring Boot Actuator:
+
+```properties
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.metrics.export.prometheus.enabled=true
+```
+
+### Cloud Platform Monitoring
+
+<CodeGroup>
+```bash AWS CloudWatch
+# Create log group
+aws logs create-log-group --log-group-name /opencbs/application
+
+# Configure log shipping in application
+logging.logback.rollingpolicy.file-name-pattern=/var/log/opencbs/application-%d{yyyy-MM-dd}.%i.log
+```
+
+```bash Azure Application Insights
+# Add dependency
+<dependency>
+    <groupId>com.microsoft.azure</groupId>
+    <artifactId>applicationinsights-spring-boot-starter</artifactId>
+    <version>2.6.4</version>
+</dependency>
+
+# Configure
+azure.application-insights.instrumentation-key=${APPINSIGHTS_KEY}
+```
+
+```bash Google Cloud Logging
+# Add dependency
+<dependency>
+    <groupId>com.google.cloud</groupId>
+    <artifactId>spring-cloud-gcp-starter-logging</artifactId>
+</dependency>
+```
+</CodeGroup>
+
+## Scaling Considerations
+
+### Horizontal Scaling
+
+For multiple application instances:
+
+1. **Session management**: Use Redis or database-backed sessions
+2. **File storage**: Use cloud object storage (S3, Azure Blob, GCS)
+3. **Load balancing**: Configure health check endpoint
+4. **Database connections**: Adjust connection pool based on instance count
+
+### Performance Optimization
+
+```properties
+# JVM Options
+JAVA_OPTS=-Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+
+# Connection pool
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.minimum-idle=5
+
+# Caching
+spring.cache.type=redis
+spring.redis.host=${REDIS_HOST}
+spring.redis.port=6379
+```
+
+## Security Checklist
+
+- [ ] Use HTTPS/TLS for all connections
+- [ ] Store secrets in secure vaults (AWS Secrets Manager, Azure Key Vault, etc.)
+- [ ] Enable database encryption at rest
+- [ ] Configure WAF (Web Application Firewall)
+- [ ] Implement rate limiting
+- [ ] Set up DDoS protection
+- [ ] Regular security updates and patches
+- [ ] Configure backup and disaster recovery
+- [ ] Enable audit logging
+- [ ] Restrict database access to application subnets only
+
+## Next Steps
+
+After deployment:
+
+1. Configure monitoring and alerting
+2. Set up automated backups
+3. Implement CI/CD pipeline
+4. Configure custom domain and SSL certificates
+5. Performance testing and optimization
+6. Document runbooks for common operations
