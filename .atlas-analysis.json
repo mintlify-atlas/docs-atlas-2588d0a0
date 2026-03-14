@@ -1,0 +1,155 @@
+{
+  "projectType": "saas",
+  "projectName": "OpenCBS Cloud",
+  "projectDescription": "A flexible, scalable open-source Core Banking System designed for microfinance institutions, cooperatives, digital lenders, and medium-sized banks.",
+  "theme": "linden",
+  "primaryColor": "#2E5090",
+  "lightColor": "#5B7BB4",
+  "darkColor": "#1A3A6B",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/modules",
+              "concepts/profiles",
+              "concepts/branches"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/client-management",
+              "guides/loan-management",
+              "guides/savings-management",
+              "guides/accounting",
+              "guides/reports"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/configuration",
+              "admin/user-roles-permissions",
+              "admin/custom-fields",
+              "admin/day-closure"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/requirements",
+              "deployment/build",
+              "deployment/database-setup",
+              "deployment/cloud-deployment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Core",
+            "pages": [
+              "api/profiles",
+              "api/branches",
+              "api/users",
+              "api/currencies",
+              "api/holidays"
+            ]
+          },
+          {
+            "group": "Loans",
+            "pages": [
+              "api/loans/overview",
+              "api/loans/products",
+              "api/loans/applications",
+              "api/loans/repayments",
+              "api/loans/events"
+            ]
+          },
+          {
+            "group": "Savings",
+            "pages": [
+              "api/savings/overview",
+              "api/savings/products",
+              "api/savings/accounts",
+              "api/savings/transactions"
+            ]
+          },
+          {
+            "group": "Accounting",
+            "pages": [
+              "api/accounting/accounts",
+              "api/accounting/entries",
+              "api/accounting/transactions"
+            ]
+          },
+          {
+            "group": "Other Products",
+            "pages": [
+              "api/term-deposits",
+              "api/borrowings",
+              "api/bonds"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Client and group management for individuals and organizations",
+    "Comprehensive loan management with flexible products and schedules",
+    "Savings and deposit accounts with interest calculations",
+    "Term deposits, borrowings, and bond management",
+    "Double-entry accounting system with chart of accounts",
+    "Teller operations and cash management",
+    "Custom fields for extensibility",
+    "Role-based access control and permissions",
+    "Audit trail and event tracking",
+    "Day closure process for end-of-day operations",
+    "Reporting and analytics",
+    "Multi-currency support"
+  ],
+  "publicApiSurface": [
+    "POST /api/login - Authentication endpoint",
+    "GET /api/profiles - List client profiles",
+    "POST /api/profiles - Create client profile",
+    "GET /api/loans - List all loans",
+    "POST /api/loans - Create new loan",
+    "GET /api/loans/{id}/schedule - Get loan schedule",
+    "POST /api/loans/{id}/repayment - Record loan repayment",
+    "GET /api/savings - List savings accounts",
+    "POST /api/savings - Create savings account",
+    "GET /api/accounting/entries - List accounting entries",
+    "POST /api/accounting/entry - Create accounting entry",
+    "GET /api/accounting/accounts - List chart of accounts",
+    "GET /api/term-deposits - List term deposits",
+    "GET /api/borrowings - List borrowings",
+    "GET /api/bonds - List bonds",
+    "GET /api/users - List users",
+    "POST /api/users - Create user",
+    "GET /api/branches - List branches",
+    "GET /api/currencies - List currencies",
+    "GET /api/reports - Generate reports"
+  ]
+}
